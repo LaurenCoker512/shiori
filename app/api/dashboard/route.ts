@@ -1,0 +1,74 @@
+import { query } from '@/lib/db';
+import type { GrammarPattern } from '@/lib/types';
+
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+export async function GET(): Promise<Response> {
+  const [seenResult, knownResult, comprehensionResult, grammarResult] = await Promise.all([
+    query<{ date: string; count: string }>(
+      `SELECT DATE(seen_at) AS date, COUNT(*) AS count
+       FROM words
+       WHERE user_id = 1 AND seen_at IS NOT NULL
+       GROUP BY DATE(seen_at)
+       ORDER BY date ASC`,
+    ),
+    query<{ date: string; count: string }>(
+      `SELECT DATE(known_at) AS date, COUNT(*) AS count
+       FROM words
+       WHERE user_id = 1 AND known_at IS NOT NULL
+       GROUP BY DATE(known_at)
+       ORDER BY date ASC`,
+    ),
+    query<{ text_id: number; title: string; last_read_at: string; pct_known: string }>(
+      `WITH token_stats AS (
+        SELECT
+          t.id AS text_id,
+          t.title,
+          t.last_read_at,
+          COUNT(*) FILTER (WHERE w.status = 'known') AS known_count,
+          COUNT(*) AS total_count
+        FROM texts t
+        CROSS JOIN LATERAL jsonb_array_elements(t.parsed_content) AS sentence
+        CROSS JOIN LATERAL jsonb_array_elements(sentence->'tokens') AS token
+        LEFT JOIN words w
+          ON w.dictionary_form = token->>'dictionary_form'
+          AND w.reading = token->>'reading'
+          AND w.user_id = 1
+        WHERE t.user_id = 1
+          AND (token->>'is_content_word')::boolean = true
+        GROUP BY t.id, t.title, t.last_read_at
+      )
+      SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
+      FROM token_stats
+      ORDER BY last_read_at DESC NULLS LAST`,
+    ),
+    query<GrammarPattern & { sentence_count: string }>(
+      `SELECT gp.*, COUNT(sp.id) AS sentence_count
+       FROM grammar_patterns gp
+       LEFT JOIN sentence_patterns sp ON sp.grammar_pattern_id = gp.id
+       WHERE gp.user_id = 1
+       GROUP BY gp.id
+       ORDER BY gp.first_encountered_at ASC`,
+    ),
+  ]);
+
+  return jsonResponse({
+    seenSeries: seenResult.rows.map(r => ({ date: r.date, count: Number(r.count) })),
+    knownSeries: knownResult.rows.map(r => ({ date: r.date, count: Number(r.count) })),
+    comprehension: comprehensionResult.rows.map(r => ({
+      text_id: r.text_id,
+      title: r.title,
+      last_read_at: r.last_read_at,
+      pct_known: Number(r.pct_known),
+    })),
+    grammarPatterns: grammarResult.rows.map(r => ({
+      ...r,
+      sentence_count: Number(r.sentence_count),
+    })),
+  });
+}

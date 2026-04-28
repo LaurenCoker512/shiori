@@ -238,7 +238,7 @@
 
 ---
 
-## Phase 13 — Furigana & Dashboard Routes
+## Phase 13 — Furigana & Dashboard Routes ✅
 
 **Deliverables:**
 - `app/api/furigana-overrides/route.ts` — POST handler from §8.8
