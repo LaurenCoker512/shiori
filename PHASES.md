@@ -105,7 +105,7 @@
 
 ---
 
-## Phase 6 — Claude API Wrappers
+## Phase 6 — Claude API Wrappers ✅
 
 **Deliverables:**
 - `lib/claude.ts` — all four wrappers from §7: `tokenizeText`, `analyzeGrammar`, `describeGrammarPattern`, `translateWord`
