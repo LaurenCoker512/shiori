@@ -39,7 +39,7 @@
 
 ---
 
-## Phase 3 — Shared Types & `parseTranslations`
+## Phase 3 — Shared Types & `parseTranslations` ✅
 
 **Deliverables:**
 - `lib/types.ts` — all types from §4: `WordStatus`, `JlptLevel`, `Token`, `Sentence`, `ParsedContent`, `Word`, `GrammarPattern`, `FuriganaOverride`, `parseTranslations()`
