@@ -372,7 +372,7 @@
 
 ---
 
-## Phase 18 — Furigana Edit
+## Phase 18 — Furigana Edit ✅
 
 **Deliverables:**
 - `components/reader/FuriganaEdit.tsx` — §9.6

@@ -25,6 +25,24 @@ test('reader: hover over sentence shows grammar tooltip', async ({ page }) => {
   });
 });
 
+test('reader: furigana edit updates displayed reading', async ({ page }) => {
+  await page.goto('/import');
+  await page.getByLabel('Title').fill('Furigana Edit E2E Test');
+  await page.getByLabel('Content').fill('猫が好きです。');
+  await page.getByRole('button', { name: /^import$/i }).click();
+  await page.waitForURL(/\/texts\/\d+/);
+
+  await page.locator('ruby').first().hover();
+  await page.locator('[data-furigana-edit-trigger]').first().click();
+
+  const input = page.getByRole('textbox', { name: /furigana reading/i });
+  await input.clear();
+  await input.fill('にゃん');
+  await page.getByRole('button', { name: /^save$/i }).click();
+
+  await expect(page.locator('rt').first()).toContainText('にゃん');
+});
+
 test('reader: click word opens popover', async ({ page }) => {
   await page.goto('/import');
   await page.getByLabel('Title').fill('Popover E2E Test');

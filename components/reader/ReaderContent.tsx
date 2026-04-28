@@ -16,6 +16,13 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
   const [showFurigana, setShowFurigana] = useState(true);
   const [wordMap, setWordMap] = useState<Record<string, Word>>(wordStatusMap);
   const [popoverWord, setPopoverWord] = useState<Word | null>(null);
+  const [overrideMap, setOverrideMap] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const override of furiganaOverrides) {
+      map[override.surface_form] = override.corrected_reading;
+    }
+    return map;
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');
@@ -56,9 +63,8 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     setWordMap(prev => ({ ...prev, [wordKey(updated)]: updated }));
   }
 
-  const overrideMap: Record<string, string> = {};
-  for (const override of furiganaOverrides) {
-    overrideMap[override.surface_form] = override.corrected_reading;
+  function handleFuriganaEdit(surface: string, newReading: string) {
+    setOverrideMap(prev => ({ ...prev, [surface]: newReading }));
   }
 
   return (
@@ -81,6 +87,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
             furiganaOverrides={overrideMap}
             showFurigana={showFurigana}
             onWordClick={handleWordClick}
+            onFuriganaEdit={handleFuriganaEdit}
             textId={textId}
           />
         ))}

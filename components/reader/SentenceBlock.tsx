@@ -20,6 +20,7 @@ interface SentenceBlockProps {
   furiganaOverrides: Record<string, string>;
   showFurigana: boolean;
   onWordClick?: (word: Word) => void;
+  onFuriganaEdit?: (surface: string, newReading: string) => void;
   textId: number;
 }
 
@@ -29,6 +30,7 @@ export function SentenceBlock({
   furiganaOverrides,
   showFurigana,
   onWordClick,
+  onFuriganaEdit,
   textId,
 }: SentenceBlockProps) {
   const [isGrammarActive, setIsGrammarActive] = useState(false);
@@ -41,6 +43,7 @@ export function SentenceBlock({
       furiganaOverride={furiganaOverrides[token.surface] ?? null}
       showFurigana={showFurigana}
       onWordClick={onWordClick}
+      onFuriganaEdit={onFuriganaEdit}
     />
   ));
 
