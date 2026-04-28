@@ -142,7 +142,7 @@
 
 ---
 
-## Phase 8 — Text Reader & Management Routes
+## Phase 8 — Text Reader & Management Routes ✅
 
 **Deliverables:**
 - `app/api/texts/[id]/route.ts` — GET, PATCH, DELETE handlers from §8.2 and §8.3
