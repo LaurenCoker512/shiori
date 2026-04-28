@@ -17,6 +17,7 @@ interface SentenceBlockProps {
   wordStatusMap: Record<string, Word>;
   furiganaOverrides: Record<string, string>;
   showFurigana: boolean;
+  onWordClick?: (word: Word) => void;
 }
 
 export function SentenceBlock({
@@ -24,6 +25,7 @@ export function SentenceBlock({
   wordStatusMap,
   furiganaOverrides,
   showFurigana,
+  onWordClick,
 }: SentenceBlockProps) {
   const tokens = sentence.tokens.map((token, i) => (
     <WordToken
@@ -32,6 +34,7 @@ export function SentenceBlock({
       word={wordStatusMap[`${token.dictionary_form}|${token.reading}`] ?? null}
       furiganaOverride={furiganaOverrides[token.surface] ?? null}
       showFurigana={showFurigana}
+      onWordClick={onWordClick}
     />
   ));
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { ParsedContent, Word, FuriganaOverride } from '@/lib/types';
 import { SentenceBlock } from './SentenceBlock';
+import { WordPopover } from './WordPopover';
 
 interface ReaderContentProps {
   content: ParsedContent;
@@ -12,6 +13,8 @@ interface ReaderContentProps {
 
 export function ReaderContent({ content, wordStatusMap, furiganaOverrides }: ReaderContentProps) {
   const [showFurigana, setShowFurigana] = useState(true);
+  const [wordMap, setWordMap] = useState<Record<string, Word>>(wordStatusMap);
+  const [popoverWord, setPopoverWord] = useState<Word | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');
@@ -22,6 +25,34 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides }: Rea
     const next = !showFurigana;
     setShowFurigana(next);
     localStorage.setItem('shiori-furigana', String(next));
+  }
+
+  function wordKey(word: Word): string {
+    return `${word.dictionary_form}|${word.reading}`;
+  }
+
+  function handleWordClick(word: Word) {
+    const key = wordKey(word);
+    const originalWord = wordMap[key] ?? word;
+
+    if (word.status === 'unseen') {
+      const advanced: Word = { ...word, status: 'seen' };
+      setWordMap(prev => ({ ...prev, [key]: advanced }));
+      fetch(`/api/words/${word.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'seen' }),
+      }).catch(() => {
+        setWordMap(prev => ({ ...prev, [key]: originalWord }));
+      });
+      setPopoverWord(advanced);
+    } else {
+      setPopoverWord(word);
+    }
+  }
+
+  function handleStatusUpdate(updated: Word) {
+    setWordMap(prev => ({ ...prev, [wordKey(updated)]: updated }));
   }
 
   const overrideMap: Record<string, string> = {};
@@ -45,12 +76,20 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides }: Rea
           <SentenceBlock
             key={i}
             sentence={sentence}
-            wordStatusMap={wordStatusMap}
+            wordStatusMap={wordMap}
             furiganaOverrides={overrideMap}
             showFurigana={showFurigana}
+            onWordClick={handleWordClick}
           />
         ))}
       </div>
+      {popoverWord !== null && (
+        <WordPopover
+          word={popoverWord}
+          onClose={() => setPopoverWord(null)}
+          onStatusUpdate={handleStatusUpdate}
+        />
+      )}
     </div>
   );
 }

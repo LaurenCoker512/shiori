@@ -10,3 +10,14 @@ test('reader: ruby tokens render, heading sentence renders as h2', async ({ page
   await expect(page.locator('ruby').first()).toBeVisible();
   await expect(page.locator('h2')).toBeVisible();
 });
+
+test('reader: click word opens popover', async ({ page }) => {
+  await page.goto('/import');
+  await page.getByLabel('Title').fill('Popover E2E Test');
+  await page.getByLabel('Content').fill('猫が好きです。');
+  await page.getByRole('button', { name: /^import$/i }).click();
+  await page.waitForURL(/\/texts\/\d+/);
+
+  await page.locator('ruby').first().click();
+  await expect(page.locator('[role="dialog"]')).toBeVisible();
+});

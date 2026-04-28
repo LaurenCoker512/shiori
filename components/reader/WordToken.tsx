@@ -5,9 +5,10 @@ interface WordTokenProps {
   word: Word | null;
   furiganaOverride: string | null;
   showFurigana: boolean;
+  onWordClick?: (word: Word) => void;
 }
 
-export function WordToken({ token, word, furiganaOverride, showFurigana }: WordTokenProps) {
+export function WordToken({ token, word, furiganaOverride, showFurigana, onWordClick }: WordTokenProps) {
   if (!token.is_content_word) {
     return <span>{token.surface}</span>;
   }
@@ -16,8 +17,14 @@ export function WordToken({ token, word, furiganaOverride, showFurigana }: WordT
   const statusClass = word !== null ? statusToUnderlineClass(word.status) : '';
   const showRt = showFurigana || word === null || word.status !== 'known';
 
+  function handleClick() {
+    if (word !== null && onWordClick !== undefined) {
+      onWordClick(word);
+    }
+  }
+
   return (
-    <ruby aria-label={reading} className={statusClass} data-word>
+    <ruby aria-label={reading} className={statusClass} data-word onClick={handleClick}>
       {token.surface}
       <rt aria-hidden="true" className={showRt ? '' : 'hidden'}>{reading}</rt>
     </ruby>

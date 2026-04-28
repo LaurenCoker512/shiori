@@ -321,7 +321,7 @@
 
 ---
 
-## Phase 16 — Word Popover & Status Toggling
+## Phase 16 — Word Popover & Status Toggling ✅
 
 **Deliverables:**
 - `components/reader/WordPopover.tsx` — §9.5
