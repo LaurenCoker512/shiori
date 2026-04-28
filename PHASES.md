@@ -123,7 +123,7 @@
 
 ---
 
-## Phase 7 — Import API Route (`POST /api/texts`)
+## Phase 7 — Import API Route (`POST /api/texts`) ✅
 
 **Deliverables:**
 - `app/api/texts/route.ts` — POST handler from §8.1
