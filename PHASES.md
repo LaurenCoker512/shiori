@@ -5,7 +5,7 @@
 
 ---
 
-## Phase 1 — Project Scaffold
+## Phase 1 — Project Scaffold ✅
 
 **Deliverables:**
 - `npx create-next-app@14` with App Router, TypeScript, Tailwind CSS
@@ -23,7 +23,7 @@
 
 ---
 
-## Phase 2 — Database Migration & Client
+## Phase 2 — Database Migration & Client ✅
 
 **Deliverables:**
 - `migrations/001_initial.sql` — full schema from §3.1
