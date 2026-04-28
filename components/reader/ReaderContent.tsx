@@ -9,9 +9,10 @@ interface ReaderContentProps {
   content: ParsedContent;
   wordStatusMap: Record<string, Word>;
   furiganaOverrides: FuriganaOverride[];
+  textId: number;
 }
 
-export function ReaderContent({ content, wordStatusMap, furiganaOverrides }: ReaderContentProps) {
+export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId }: ReaderContentProps) {
   const [showFurigana, setShowFurigana] = useState(true);
   const [wordMap, setWordMap] = useState<Record<string, Word>>(wordStatusMap);
   const [popoverWord, setPopoverWord] = useState<Word | null>(null);
@@ -80,6 +81,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides }: Rea
             furiganaOverrides={overrideMap}
             showFurigana={showFurigana}
             onWordClick={handleWordClick}
+            textId={textId}
           />
         ))}
       </div>

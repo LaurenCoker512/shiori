@@ -42,6 +42,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
         content={text.parsed_content}
         wordStatusMap={wordStatusMap}
         furiganaOverrides={furiganaResult.rows}
+        textId={text.id}
       />
     </main>
   );

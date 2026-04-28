@@ -349,7 +349,7 @@
 
 ---
 
-## Phase 17 — Grammar Tooltip
+## Phase 17 — Grammar Tooltip ✅
 
 **Deliverables:**
 - `components/reader/GrammarTooltip.tsx` — §9.7

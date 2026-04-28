@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import type { Sentence, Word } from '@/lib/types';
 import { WordToken } from './WordToken';
+import { GrammarTooltip } from './GrammarTooltip';
 
 const HEADING_CLASSES: Record<string, string> = {
   h1: 'text-3xl font-bold my-4',
@@ -18,6 +20,7 @@ interface SentenceBlockProps {
   furiganaOverrides: Record<string, string>;
   showFurigana: boolean;
   onWordClick?: (word: Word) => void;
+  textId: number;
 }
 
 export function SentenceBlock({
@@ -26,7 +29,10 @@ export function SentenceBlock({
   furiganaOverrides,
   showFurigana,
   onWordClick,
+  textId,
 }: SentenceBlockProps) {
+  const [isGrammarActive, setIsGrammarActive] = useState(false);
+
   const tokens = sentence.tokens.map((token, i) => (
     <WordToken
       key={i}
@@ -46,16 +52,24 @@ export function SentenceBlock({
 
   function handlePointerEvent(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest('[data-word]') !== null) return;
-    // grammar trigger — wired in Phase 17
+    if (isGrammarActive) return;
+    setIsGrammarActive(true);
   }
 
   return (
     <p
       className="my-2 leading-loose"
       data-grammar-trigger
-      onPointerEnter={handlePointerEvent}
+      onPointerOver={handlePointerEvent}
     >
       {tokens}
+      {isGrammarActive && (
+        <GrammarTooltip
+          textId={textId}
+          sentenceIndex={sentence.sentence_index}
+          onClose={() => setIsGrammarActive(false)}
+        />
+      )}
     </p>
   );
 }
