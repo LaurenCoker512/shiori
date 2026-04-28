@@ -263,7 +263,7 @@
 
 ---
 
-## Phase 14 — Import Page
+## Phase 14 — Import Page ✅
 
 **Deliverables:**
 - `components/import/ImportForm.tsx` — §9.1
