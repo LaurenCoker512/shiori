@@ -204,7 +204,7 @@
 
 ---
 
-## Phase 11 — Translation Route
+## Phase 11 — Translation Route ✅
 
 **Deliverables:**
 - `app/api/words/[id]/translation/route.ts` — GET handler from §8.6
