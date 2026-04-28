@@ -287,7 +287,7 @@
 
 ---
 
-## Phase 15 — Reader Skeleton
+## Phase 15 — Reader Skeleton ✅
 
 **Deliverables:**
 - `app/texts/[id]/page.tsx` — fetches via `GET /api/texts/[id]`, passes to `ReaderContent`
