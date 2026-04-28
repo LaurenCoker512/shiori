@@ -56,7 +56,7 @@
 
 ---
 
-## Phase 4 — Format Detection
+## Phase 4 — Format Detection ✅
 
 **Deliverables:**
 - `lib/format-detection.ts` — `detectFormat()` from §5
