@@ -160,7 +160,7 @@
 
 ---
 
-## Phase 9 — Re-parse Route
+## Phase 9 — Re-parse Route ✅
 
 **Deliverables:**
 - `app/api/texts/[id]/reparse/route.ts` — POST handler from §8.4
