@@ -220,7 +220,7 @@
 
 ---
 
-## Phase 12 — Grammar Analysis Route
+## Phase 12 — Grammar Analysis Route ✅
 
 **Deliverables:**
 - `app/api/sentences/[textId]/[sentenceIndex]/grammar/route.ts` — GET handler from §8.5
