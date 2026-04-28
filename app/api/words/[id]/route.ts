@@ -1,0 +1,55 @@
+import { query } from '@/lib/db';
+import type { Word, WordStatus } from '@/lib/types';
+
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } },
+): Promise<Response> {
+  const id = parseInt(params.id, 10);
+  if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
+
+  const body = await request.json() as { status?: WordStatus; user_translation?: string | null };
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+
+  if (body.status !== undefined) {
+    updates.push(`status = $${values.length + 1}`);
+    values.push(body.status);
+
+    if (body.status === 'seen') {
+      updates.push(`seen_at = COALESCE(seen_at, NOW())`);
+      updates.push(`known_at = NULL`);
+    } else if (body.status === 'known') {
+      updates.push(`known_at = NOW()`);
+    }
+  }
+
+  if ('user_translation' in body) {
+    updates.push(`user_translation = $${values.length + 1}`);
+    values.push(body.user_translation ?? null);
+  }
+
+  if (updates.length === 0) {
+    return jsonResponse({ error: 'No fields to update' }, 400);
+  }
+
+  values.push(id);
+  const result = await query<Word>(
+    `UPDATE words SET ${updates.join(', ')} WHERE id = $${values.length} AND user_id = 1 RETURNING *`,
+    values,
+  );
+
+  if (result.rows.length === 0) {
+    return jsonResponse({ error: 'Not found' }, 404);
+  }
+
+  return jsonResponse(result.rows[0]);
+}

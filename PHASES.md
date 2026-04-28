@@ -178,7 +178,7 @@
 
 ---
 
-## Phase 10 — Word Update & Browser Routes
+## Phase 10 — Word Update & Browser Routes ✅
 
 **Deliverables:**
 - `app/api/words/[id]/route.ts` — PATCH handler from §8.7
