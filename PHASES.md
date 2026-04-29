@@ -423,7 +423,7 @@
 
 ---
 
-## Phase 20 — Reader Header: Rename & Delete
+## Phase 20 — Reader Header: Rename & Delete ✅
 
 **Deliverables:**
 - Rename flow in `ReaderHeader.tsx`: inline edit → `PATCH /api/texts/[id]` → update title in UI
