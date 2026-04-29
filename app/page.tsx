@@ -1,101 +1,103 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { query } from '@/lib/db';
+import type { Word, GrammarPattern } from '@/lib/types';
+import { VocabularyChart } from '@/components/dashboard/VocabularyChart';
+import { ComprehensionList } from '@/components/dashboard/ComprehensionList';
+import { WordBrowser } from '@/components/dashboard/WordBrowser';
+import { GrammarPatternLog } from '@/components/dashboard/GrammarPatternLog';
 
-export default function Home() {
+export default async function DashboardPage() {
+  const [seenResult, knownResult, comprehensionResult, grammarResult, wordsResult, wordsCountResult] =
+    await Promise.all([
+      query<{ date: string; count: string }>(
+        `SELECT DATE(seen_at) AS date, COUNT(*) AS count
+         FROM words WHERE user_id = 1 AND seen_at IS NOT NULL
+         GROUP BY DATE(seen_at) ORDER BY date ASC`,
+      ),
+      query<{ date: string; count: string }>(
+        `SELECT DATE(known_at) AS date, COUNT(*) AS count
+         FROM words WHERE user_id = 1 AND known_at IS NOT NULL
+         GROUP BY DATE(known_at) ORDER BY date ASC`,
+      ),
+      query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string }>(
+        `WITH token_stats AS (
+           SELECT
+             t.id AS text_id, t.title, t.last_read_at,
+             COUNT(*) FILTER (WHERE w.status = 'known') AS known_count,
+             COUNT(*) AS total_count
+           FROM texts t
+           CROSS JOIN LATERAL jsonb_array_elements(t.parsed_content) AS sentence
+           CROSS JOIN LATERAL jsonb_array_elements(sentence->'tokens') AS token
+           LEFT JOIN words w
+             ON w.dictionary_form = token->>'dictionary_form'
+             AND w.reading = token->>'reading'
+             AND w.user_id = 1
+           WHERE t.user_id = 1
+             AND (token->>'is_content_word')::boolean = true
+           GROUP BY t.id, t.title, t.last_read_at
+         )
+         SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
+         FROM token_stats ORDER BY last_read_at DESC NULLS LAST`,
+      ),
+      query<GrammarPattern & { sentence_count: string }>(
+        `SELECT gp.*, COUNT(sp.id) AS sentence_count
+         FROM grammar_patterns gp
+         LEFT JOIN sentence_patterns sp ON sp.grammar_pattern_id = gp.id
+         WHERE gp.user_id = 1
+         GROUP BY gp.id ORDER BY gp.first_encountered_at ASC`,
+      ),
+      query<Word>(
+        `SELECT * FROM words WHERE user_id = 1 ORDER BY seen_at DESC NULLS LAST LIMIT 50`,
+      ),
+      query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM words WHERE user_id = 1`,
+      ),
+    ]);
+
+  const seenSeries = seenResult.rows.map(r => ({ date: r.date, count: Number(r.count) }));
+  const knownSeries = knownResult.rows.map(r => ({ date: r.date, count: Number(r.count) }));
+  const comprehension = comprehensionResult.rows.map(r => ({
+    text_id: r.text_id,
+    title: r.title,
+    last_read_at: r.last_read_at,
+    pct_known: Number(r.pct_known),
+  }));
+  const grammarPatterns = grammarResult.rows.map(r => ({
+    ...r,
+    sentence_count: Number(r.sentence_count),
+  }));
+  const initialWords = wordsResult.rows;
+  const initialTotal = Number(wordsCountResult.rows[0]?.total ?? 0);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="max-w-5xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">栞 Dashboard</h1>
+        <Link href="/import" className="text-blue-600 hover:underline text-sm">
+          + Import text
+        </Link>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Vocabulary Progress</h2>
+          <VocabularyChart seenSeries={seenSeries} knownSeries={knownSeries} />
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold mb-4">Texts</h2>
+          <ComprehensionList comprehension={comprehension} />
+        </section>
+      </div>
+
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Word Browser</h2>
+        <WordBrowser initialWords={initialWords} initialTotal={initialTotal} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Grammar Patterns</h2>
+        <GrammarPatternLog patterns={grammarPatterns} />
+      </section>
+    </main>
   );
 }
