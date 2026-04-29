@@ -73,7 +73,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
         <button
           type="button"
           onClick={toggleFurigana}
-          className="text-sm text-blue-600 underline"
+          className="min-h-11 px-2 inline-flex items-center text-sm text-blue-600 underline"
         >
           {showFurigana ? 'Hide furigana' : 'Show furigana'}
         </button>

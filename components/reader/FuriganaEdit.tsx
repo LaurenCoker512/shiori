@@ -38,10 +38,10 @@ export function FuriganaEdit({ wordId, surfaceForm, currentReading, onSave, onCa
         <Spinner />
       ) : (
         <span className="flex gap-1">
-          <button type="button" onClick={handleSave} className="text-blue-600 hover:underline">
+          <button type="button" onClick={handleSave} className="min-h-11 px-2 inline-flex items-center text-blue-600 hover:underline">
             Save
           </button>
-          <button type="button" onClick={onCancel} className="text-gray-500 hover:underline">
+          <button type="button" onClick={onCancel} className="min-h-11 px-2 inline-flex items-center text-gray-500 hover:underline">
             Cancel
           </button>
         </span>

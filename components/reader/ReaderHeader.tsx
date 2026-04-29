@@ -64,13 +64,13 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
           {renameError !== '' && (
             <span role="alert" className="text-red-600 text-sm">{renameError}</span>
           )}
-          <button type="submit" className="text-blue-600 hover:underline text-sm">
+          <button type="submit" className="min-h-11 px-2 inline-flex items-center text-blue-600 hover:underline text-sm">
             Save
           </button>
           <button
             type="button"
             onClick={() => setIsRenaming(false)}
-            className="text-gray-500 hover:underline text-sm"
+            className="min-h-11 px-2 inline-flex items-center text-gray-500 hover:underline text-sm"
           >
             Cancel
           </button>

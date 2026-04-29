@@ -20,14 +20,14 @@ export function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogPro
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
+            className="min-h-11 px-4 py-2 text-gray-700 border rounded hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="min-h-11 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
             Confirm
           </button>

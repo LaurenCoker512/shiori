@@ -100,14 +100,14 @@ export function WordPopover({ word, onClose, onStatusUpdate }: WordPopoverProps)
             type="button"
             onClick={handleMarkKnown}
             disabled={markingKnown}
-            className="text-sm bg-green-600 text-white px-3 py-1 rounded"
+            className="min-h-11 text-sm bg-green-600 text-white px-3 py-1 rounded"
           >
             Mark as known
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm border px-3 py-1 rounded"
+            className="min-h-11 text-sm border px-3 py-1 rounded"
           >
             Close
           </button>
