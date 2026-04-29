@@ -70,7 +70,7 @@ export function GrammarPatternLog({ patterns }: GrammarPatternLogProps) {
                   <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{pattern.jlpt_level}</span>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
                 <span>{pattern.sentence_count} sentences</span>
                 <span aria-hidden="true">{isExpanded ? '▲' : '▼'}</span>
               </div>

@@ -108,7 +108,7 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
       {loading ? (
         <Spinner />
       ) : (
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label="Word list">
           <thead>
             <tr className="text-left border-b">
               <th className="py-2 pr-4">Word</th>
@@ -146,7 +146,7 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
                             <>
                               <span>{word.user_translation}</span>
                               {claudeGloss !== '' && (
-                                <span className="block text-xs text-gray-400">{claudeGloss}</span>
+                                <span className="block text-xs text-gray-500">{claudeGloss}</span>
                               )}
                             </>
                           ) : (

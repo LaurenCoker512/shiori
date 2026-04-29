@@ -79,6 +79,7 @@ export function WordPopover({ word, onClose, onStatusUpdate }: WordPopoverProps)
     <div
       ref={popoverRef}
       role="dialog"
+      aria-label={`Word details: ${word.dictionary_form}`}
       className="z-50 bg-white border rounded shadow-lg p-3 min-w-[12rem] max-w-xs"
     >
       <div aria-live="polite" aria-atomic="true">

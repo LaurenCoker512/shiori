@@ -24,6 +24,7 @@ export function OverflowMenu({ onRename, onDelete }: OverflowMenuProps) {
       {open && (
         <div
           role="menu"
+          aria-label="Text options"
           className="absolute right-0 top-full mt-1 w-36 bg-white border rounded shadow-md z-20"
         >
           <button

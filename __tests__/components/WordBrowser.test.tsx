@@ -115,6 +115,6 @@ describe('WordBrowser', () => {
 
     expect(screen.getByText('kitty')).toBeInTheDocument();
     const gloss = screen.getByText('cat; feline');
-    expect(gloss).toHaveClass('text-gray-400');
+    expect(gloss).toHaveClass('text-gray-500');
   });
 });
