@@ -20,6 +20,12 @@ function makeWord(overrides: Partial<Word> = {}): Word {
   };
 }
 
+const mockAnchorRect = {
+  top: 100, bottom: 120, left: 200, right: 250,
+  width: 50, height: 20, x: 200, y: 100,
+  toJSON: () => ({}),
+} as DOMRect;
+
 describe('WordPopover', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -29,6 +35,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'unseen', translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -41,6 +48,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -53,6 +61,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'known', translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -65,6 +74,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ user_translation: 'my cat', translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -77,6 +87,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ user_translation: null, translation: '["cat","feline"]' })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -89,6 +100,7 @@ describe('WordPopover', () => {
     const { container } = render(
       <WordPopover
         word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
         onClose={vi.fn()}
         onStatusUpdate={vi.fn()}
       />,
@@ -109,6 +121,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={onClose}
         onStatusUpdate={onStatusUpdate}
       />,
@@ -131,6 +144,7 @@ describe('WordPopover', () => {
     render(
       <WordPopover
         word={makeWord({ translation: '["cat"]' })}
+        anchorRect={mockAnchorRect}
         onClose={onClose}
         onStatusUpdate={vi.fn()}
       />,
@@ -147,6 +161,7 @@ describe('WordPopover', () => {
         <button type="button">outside</button>
         <WordPopover
           word={makeWord({ translation: '["cat"]' })}
+          anchorRect={mockAnchorRect}
           onClose={onClose}
           onStatusUpdate={vi.fn()}
         />

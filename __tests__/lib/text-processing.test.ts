@@ -1,64 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { processMarkdown, processHtml, parseHeadingSentinels } from '@/lib/text-processing';
+import { parseHeadingSentinels } from '@/lib/text-processing';
 import type { Sentence } from '@/lib/types';
-
-describe('processMarkdown', () => {
-  it('strips **bold** to plain text', async () => {
-    const result = await processMarkdown('これは**太字**です。');
-    expect(result).toBe('これは太字です。');
-  });
-
-  it('converts # Heading to __HEADING_1__Heading', async () => {
-    const result = await processMarkdown('# タイトル');
-    expect(result).toBe('__HEADING_1__タイトル');
-  });
-
-  it('converts ## Sub to __HEADING_2__Sub', async () => {
-    const result = await processMarkdown('## サブ');
-    expect(result).toBe('__HEADING_2__サブ');
-  });
-
-  it('does not sentinel non-heading lines', async () => {
-    const result = await processMarkdown('普通の文章です。');
-    expect(result).not.toContain('__HEADING_');
-    expect(result).toBe('普通の文章です。');
-  });
-
-  it('preserves paragraph separation', async () => {
-    const result = await processMarkdown('段落1。\n\n段落2。');
-    expect(result).toContain('\n\n');
-  });
-});
-
-describe('processHtml', () => {
-  it('strips tags from <p>text</p>', () => {
-    expect(processHtml('<p>テキスト</p>')).toBe('テキスト');
-  });
-
-  it('converts <br> to newline', () => {
-    const result = processHtml('行1<br>行2');
-    expect(result).toBe('行1\n行2');
-  });
-
-  it('adds \\n\\n after block elements', () => {
-    const result = processHtml('<p>段落1</p><p>段落2</p>');
-    expect(result).toContain('\n\n');
-    expect(result).toContain('段落1');
-    expect(result).toContain('段落2');
-  });
-
-  it('collapses 3+ newlines to \\n\\n', () => {
-    const result = processHtml('<p>a</p><p>b</p><p>c</p>');
-    expect(result).not.toMatch(/\n{3,}/);
-  });
-});
 
 describe('parseHeadingSentinels', () => {
   const makeToken = (surface: string) => ({
     surface,
     dictionary_form: surface,
     reading: surface,
-    pos: 'noun',
     is_content_word: true,
   });
 

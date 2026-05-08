@@ -9,7 +9,7 @@ interface WordTokenProps {
   word: Word | null;
   furiganaOverride: string | null;
   showFurigana: boolean;
-  onWordClick?: (word: Word) => void;
+  onWordClick?: (word: Word, anchor: DOMRect) => void;
   onFuriganaEdit?: (surface: string, newReading: string) => void;
 }
 
@@ -23,11 +23,11 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
 
   const reading = furiganaOverride ?? token.reading;
   const statusClass = word !== null ? statusToUnderlineClass(word.status) : '';
-  const showRt = showFurigana || word === null || word.status !== 'known';
+  const showRt = showFurigana;
 
-  function handleClick() {
+  function handleClick(e: React.MouseEvent<HTMLElement>) {
     if (word !== null && onWordClick !== undefined) {
-      onWordClick(word);
+      onWordClick(word, e.currentTarget.getBoundingClientRect());
     }
   }
 

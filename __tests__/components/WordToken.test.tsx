@@ -7,7 +7,6 @@ const contentToken: Token = {
   surface: '猫',
   dictionary_form: '猫',
   reading: 'ネコ',
-  pos: 'noun',
   is_content_word: true,
 };
 
@@ -15,7 +14,6 @@ const nonContentToken: Token = {
   surface: 'は',
   dictionary_form: 'は',
   reading: 'は',
-  pos: 'particle',
   is_content_word: false,
 };
 
@@ -67,14 +65,14 @@ describe('WordToken', () => {
     expect(container.querySelector('rt')).toHaveClass('hidden');
   });
 
-  it('unseen word + showFurigana false → <rt> visible (no hidden class)', () => {
+  it('unseen word + showFurigana false → <rt> hidden', () => {
     const { container } = render(
       <WordToken token={contentToken} word={makeWord('unseen')} furiganaOverride={null} showFurigana={false} />,
     );
-    expect(container.querySelector('rt')).not.toHaveClass('hidden');
+    expect(container.querySelector('rt')).toHaveClass('hidden');
   });
 
-  it('known word + showFurigana true → <rt> visible (toggle override)', () => {
+  it('known word + showFurigana true → <rt> visible', () => {
     const { container } = render(
       <WordToken token={contentToken} word={makeWord('known')} furiganaOverride={null} showFurigana={true} />,
     );

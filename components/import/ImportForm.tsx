@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { detectFormat } from '@/lib/format-detection';
-import { processMarkdown, processHtml } from '@/lib/text-processing';
 import { Spinner } from '@/components/ui/Spinner';
 
 const LONG_TEXT_THRESHOLD = 30000;
@@ -12,42 +10,25 @@ export function ImportForm() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [formatOverride, setFormatOverride] = useState<'html' | 'markdown' | null>(null);
-  const [activeFormat, setActiveFormat] = useState<'html' | 'markdown'>('markdown');
   const [isLongText, setIsLongText] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fmt = formatOverride ?? detectFormat(content);
-    setActiveFormat(fmt);
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!content) {
-      setIsLongText(false);
-      return;
+    if (!title) {
+      setTitle(file.name.replace(/\.txt$/i, ''));
     }
 
-    if (fmt === 'html') {
-      setIsLongText(processHtml(content).length > LONG_TEXT_THRESHOLD);
-      return;
-    }
-
-    let cancelled = false;
-    void processMarkdown(content).then(cleaned => {
-      if (!cancelled) setIsLongText(cleaned.length > LONG_TEXT_THRESHOLD);
-    });
-    return () => {
-      cancelled = true;
+    const reader = new FileReader();
+    reader.onload = event => {
+      const text = event.target?.result as string;
+      setContent(text);
+      setIsLongText(text.length > LONG_TEXT_THRESHOLD);
     };
-  }, [content, formatOverride]);
-
-  function toggleFormat() {
-    setFormatOverride(prev => {
-      if (prev === null) {
-        return detectFormat(content) === 'html' ? 'markdown' : 'html';
-      }
-      return prev === 'html' ? 'markdown' : 'html';
-    });
+    reader.readAsText(file);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,11 +39,7 @@ export function ImportForm() {
       const response = await fetch('/api/texts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          content,
-          ...(formatOverride !== null && { formatOverride }),
-        }),
+        body: JSON.stringify({ title, content }),
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
@@ -91,25 +68,14 @@ export function ImportForm() {
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="content" className="font-medium">Content</label>
-        <textarea
-          id="content"
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          className="border rounded px-3 py-2 h-48 resize-y"
+        <label htmlFor="file" className="font-medium">File</label>
+        <input
+          id="file"
+          type="file"
+          accept=".txt"
+          onChange={handleFileChange}
+          className="border rounded px-3 py-2"
         />
-      </div>
-      <div className="flex items-center gap-3 text-sm">
-        <span>
-          Format: <span data-testid="format-label">{activeFormat}</span>
-        </span>
-        <button
-          type="button"
-          onClick={toggleFormat}
-          className="underline text-blue-600"
-        >
-          Switch to {activeFormat === 'html' ? 'markdown' : 'html'}
-        </button>
       </div>
       {isLongText && (
         <p className="text-amber-600 text-sm">
@@ -122,7 +88,7 @@ export function ImportForm() {
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={!title.trim() || isSubmitting}
+          disabled={!title.trim() || !content || isSubmitting}
           className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           Import

@@ -10,7 +10,6 @@ const mockToken: Token = {
   surface: '猫',
   dictionary_form: '猫',
   reading: 'ネコ',
-  pos: 'noun',
   is_content_word: true,
 };
 
@@ -30,8 +29,10 @@ const unseenWord: Word = {
 function WordTokenWithPopover({ initialWord }: { initialWord: Word }) {
   const [word, setWord] = useState(initialWord);
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
-  function handleWordClick(clicked: Word) {
+  function handleWordClick(clicked: Word, rect: DOMRect) {
+    setAnchor(rect);
     if (clicked.status === 'unseen') {
       const advanced: Word = { ...clicked, status: 'seen' };
       setWord(advanced);
@@ -55,9 +56,10 @@ function WordTokenWithPopover({ initialWord }: { initialWord: Word }) {
         showFurigana={true}
         onWordClick={handleWordClick}
       />
-      {open && (
+      {open && anchor !== null && (
         <WordPopover
           word={word}
+          anchorRect={anchor}
           onClose={() => setOpen(false)}
           onStatusUpdate={setWord}
         />

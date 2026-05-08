@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Sentence, Word } from '@/lib/types';
+import type { Sentence, Word, GrammarPattern } from '@/lib/types';
 import { WordToken } from './WordToken';
 import { GrammarTooltip } from './GrammarTooltip';
 
@@ -19,10 +19,12 @@ interface SentenceBlockProps {
   wordStatusMap: Record<string, Word>;
   furiganaOverrides: Record<string, string>;
   showFurigana: boolean;
-  onWordClick?: (word: Word) => void;
+  onWordClick?: (word: Word, anchor: DOMRect) => void;
   onFuriganaEdit?: (surface: string, newReading: string) => void;
   textId: number;
 }
+
+type GrammarState = 'idle' | 'prompt' | 'showing' | 'hidden';
 
 export function SentenceBlock({
   sentence,
@@ -33,7 +35,8 @@ export function SentenceBlock({
   onFuriganaEdit,
   textId,
 }: SentenceBlockProps) {
-  const [isGrammarActive, setIsGrammarActive] = useState(false);
+  const [grammarState, setGrammarState] = useState<GrammarState>('idle');
+  const [cachedPatterns, setCachedPatterns] = useState<GrammarPattern[] | null>(null);
 
   const tokens = sentence.tokens.map((token, i) => (
     <WordToken
@@ -53,24 +56,53 @@ export function SentenceBlock({
     return <Tag className={HEADING_CLASSES[tag]}>{tokens}</Tag>;
   }
 
-  function handlePointerEvent(e: React.PointerEvent) {
+  function handleSentenceClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-word]') !== null) return;
-    if (isGrammarActive) return;
-    setIsGrammarActive(true);
+    if (grammarState === 'showing' || grammarState === 'prompt') return;
+    setGrammarState('prompt');
+  }
+
+  function handleConfirm(e: React.MouseEvent) {
+    e.stopPropagation();
+    setGrammarState('showing');
+  }
+
+  function handleCancel(e: React.MouseEvent) {
+    e.stopPropagation();
+    setGrammarState(cachedPatterns !== null ? 'hidden' : 'idle');
   }
 
   return (
     <p
-      className="my-2 leading-loose"
+      className="my-2 leading-loose cursor-default"
       data-grammar-trigger
-      onPointerOver={handlePointerEvent}
+      onClick={handleSentenceClick}
     >
       {tokens}
-      {isGrammarActive && (
+      {grammarState === 'prompt' && (
+        <span className="block mt-1 text-sm text-gray-600">
+          {cachedPatterns !== null ? 'Show grammar analysis?' : 'Analyze grammar for this sentence?'}
+          <button
+            className="ml-2 text-blue-600 hover:underline"
+            onClick={handleConfirm}
+          >
+            {cachedPatterns !== null ? 'Show' : 'Analyze'}
+          </button>
+          <button
+            className="ml-2 text-gray-400 hover:underline"
+            onClick={handleCancel}
+          >
+            Cancel
+          </button>
+        </span>
+      )}
+      {grammarState === 'showing' && (
         <GrammarTooltip
           textId={textId}
           sentenceIndex={sentence.sentence_index}
-          onClose={() => setIsGrammarActive(false)}
+          initialPatterns={cachedPatterns}
+          onPatternsLoaded={setCachedPatterns}
+          onClose={() => setGrammarState('hidden')}
         />
       )}
     </p>

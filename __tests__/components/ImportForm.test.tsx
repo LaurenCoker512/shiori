@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ImportForm } from '@/components/import/ImportForm';
 
@@ -8,6 +8,10 @@ const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
+
+function makeFile(content: string, name = 'test.txt'): File {
+  return new File([content], name, { type: 'text/plain' });
+}
 
 describe('ImportForm', () => {
   beforeEach(() => {
@@ -20,34 +24,29 @@ describe('ImportForm', () => {
     expect(screen.getByRole('button', { name: /^import$/i })).toBeDisabled();
   });
 
-  it('submit button enabled when title and content are filled', async () => {
+  it('submit button enabled when title and file are provided', async () => {
     const user = userEvent.setup();
     render(<ImportForm />);
     await user.type(screen.getByLabelText(/title/i), 'My Title');
-    await user.type(screen.getByLabelText(/content/i), 'Some content');
-    expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
-  });
-
-  it('format label updates as user types (auto-detect reflects input)', async () => {
-    render(<ImportForm />);
-    expect(screen.getByTestId('format-label')).toHaveTextContent('markdown');
-
-    fireEvent.change(screen.getByLabelText(/content/i), {
-      target: { value: '<p>Hello</p>' },
-    });
-
+    await user.upload(screen.getByLabelText(/file/i), makeFile('Some content'));
     await waitFor(() => {
-      expect(screen.getByTestId('format-label')).toHaveTextContent('html');
+      expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
     });
   });
 
-  it('long text warning appears when cleaned text > 30,000 characters', async () => {
+  it('auto-fills title from filename when title field is empty', async () => {
+    const user = userEvent.setup();
     render(<ImportForm />);
-    const longContent = '<p>' + 'a'.repeat(30001) + '</p>';
-    fireEvent.change(screen.getByLabelText(/content/i), {
-      target: { value: longContent },
+    await user.upload(screen.getByLabelText(/file/i), makeFile('content', 'my-story.txt'));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('my-story')).toBeInTheDocument();
     });
+  });
 
+  it('long text warning appears when file content exceeds 30,000 characters', async () => {
+    const user = userEvent.setup();
+    render(<ImportForm />);
+    await user.upload(screen.getByLabelText(/file/i), makeFile('a'.repeat(30001)));
     await waitFor(() => {
       expect(
         screen.getByText(/This text is long and may take a moment to process/i),
@@ -59,24 +58,16 @@ describe('ImportForm', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ id: 42 }), { status: 200 }),
     );
-
     const user = userEvent.setup();
     render(<ImportForm />);
-
     await user.type(screen.getByLabelText(/title/i), 'My Title');
-    const longContent = '<p>' + 'a'.repeat(30001) + '</p>';
-    fireEvent.change(screen.getByLabelText(/content/i), {
-      target: { value: longContent },
-    });
-
+    await user.upload(screen.getByLabelText(/file/i), makeFile('a'.repeat(30001)));
     await waitFor(() => {
       expect(
         screen.getByText(/This text is long and may take a moment to process/i),
       ).toBeInTheDocument();
     });
-
     expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
-
     await user.click(screen.getByRole('button', { name: /^import$/i }));
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/texts/42');
@@ -85,17 +76,18 @@ describe('ImportForm', () => {
 
   it('shows Spinner while request is in flight', async () => {
     let resolveRequest!: (value: Response) => void;
-    const pendingRequest = new Promise<Response>(resolve => {
-      resolveRequest = resolve;
-    });
+    const pendingRequest = new Promise<Response>(resolve => { resolveRequest = resolve; });
     vi.spyOn(global, 'fetch').mockReturnValue(pendingRequest);
 
     const user = userEvent.setup();
     render(<ImportForm />);
     await user.type(screen.getByLabelText(/title/i), 'My Title');
+    await user.upload(screen.getByLabelText(/file/i), makeFile('content'));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
+    });
 
     await user.click(screen.getByRole('button', { name: /^import$/i }));
-
     expect(screen.getByRole('status')).toBeInTheDocument();
 
     resolveRequest(new Response(JSON.stringify({ id: 1 }), { status: 200 }));
@@ -108,12 +100,14 @@ describe('ImportForm', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ id: 99 }), { status: 200 }),
     );
-
     const user = userEvent.setup();
     render(<ImportForm />);
     await user.type(screen.getByLabelText(/title/i), 'My Title');
+    await user.upload(screen.getByLabelText(/file/i), makeFile('content'));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
+    });
     await user.click(screen.getByRole('button', { name: /^import$/i }));
-
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/texts/99');
     });
@@ -123,12 +117,14 @@ describe('ImportForm', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ error: 'Tokenization failed' }), { status: 500 }),
     );
-
     const user = userEvent.setup();
     render(<ImportForm />);
     await user.type(screen.getByLabelText(/title/i), 'My Title');
+    await user.upload(screen.getByLabelText(/file/i), makeFile('content'));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
+    });
     await user.click(screen.getByRole('button', { name: /^import$/i }));
-
     await waitFor(() => {
       expect(screen.getByText('Tokenization failed')).toBeInTheDocument();
     });

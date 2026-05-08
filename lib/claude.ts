@@ -2,9 +2,50 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { ParsedContent, JlptLevel } from './types';
 
 const client = new Anthropic();
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-sonnet-4-6';
 
-export async function tokenizeText(cleanedText: string): Promise<ParsedContent> {
+const TOKENIZE_CHUNK_SIZE = 800;
+
+function splitIntoChunks(text: string): string[] {
+  if (text.length <= TOKENIZE_CHUNK_SIZE) return [text];
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    if (start + TOKENIZE_CHUNK_SIZE >= text.length) {
+      chunks.push(text.slice(start).trim());
+      break;
+    }
+
+    const segment = text.slice(start, start + TOKENIZE_CHUNK_SIZE);
+
+    // Prefer paragraph boundary in the second half of the segment
+    let splitAt = segment.lastIndexOf('\n\n');
+    if (splitAt < TOKENIZE_CHUNK_SIZE / 2) {
+      // Fall back to last sentence-ending punctuation
+      const lastPunct = Math.max(
+        segment.lastIndexOf('。'),
+        segment.lastIndexOf('！'),
+        segment.lastIndexOf('？'),
+      );
+      splitAt = lastPunct > TOKENIZE_CHUNK_SIZE / 2 ? lastPunct + 1 : TOKENIZE_CHUNK_SIZE;
+    }
+
+    chunks.push(text.slice(start, start + splitAt).trim());
+    start += splitAt;
+    while (start < text.length && text[start] === '\n') start++;
+  }
+
+  return chunks.filter(c => c.length > 0);
+}
+
+// Compact response: array of sentences, each sentence is an array of token tuples.
+// Token tuple: [surface, dictionary_form, reading, is_content_word (0|1)]
+type CompactToken = [string, string, string, 0 | 1];
+type CompactResponse = CompactToken[][];
+
+async function tokenizeChunk(chunk: string): Promise<ParsedContent> {
   const message = await client.messages.create({
     model: MODEL,
     max_tokens: 8192,
@@ -12,38 +53,53 @@ export async function tokenizeText(cleanedText: string): Promise<ParsedContent> 
       role: 'user',
       content: `You are a Japanese NLP tokenizer. Tokenize the following Japanese text into sentences and tokens.
 
-Return ONLY a valid JSON array with no prose, markdown, or code fences. Each element represents one sentence:
+Return ONLY a valid JSON array of sentences with no prose, markdown, or code fences.
+Each sentence is an array of token tuples: [surface, dictionary_form, hiragana_reading, is_content_word]
+is_content_word is 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace.
 
-[
-  {
-    "sentence_index": <integer, 0-based>,
-    "raw": "<full sentence string, including any __HEADING_N__ prefix>",
-    "tokens": [
-      {
-        "surface": "<surface form as it appears in text>",
-        "dictionary_form": "<dictionary/lemma form>",
-        "reading": "<hiragana reading of surface form>",
-        "pos": "<noun|verb|adjective|adverb|particle|conjunction|interjection|punctuation|other>",
-        "is_content_word": <true if this token should be tracked as vocabulary, false for particles/punctuation/conjunctions>
-      }
-    ]
-  }
-]
+Example: [["私","私","わたし",1],["は","は","は",0],["学生","学生","がくせい",1],["です","だ","です",0],["。","。","。",0]]
+
+Full output shape: [[token,token,...],[token,token,...],...]
 
 Rules:
 - Split on sentence-ending punctuation (。！？) and newlines between paragraphs.
-- Every character in the input must appear in exactly one token's surface field.
-- is_content_word: true for nouns, verbs, adjectives, adverbs, and fixed expressions. false for particles, conjunctions, auxiliary verbs, punctuation, whitespace.
-- dictionary_form for inflected words should be the plain dictionary form (e.g. 食べていた → 食べる).
-- Lines beginning with __HEADING_N__ (where N is 1–6) are section headings. Treat them as a single sentence; do not split on internal punctuation. Preserve the __HEADING_N__ prefix in the raw field verbatim.
+- Every character in the input must appear in exactly one token's surface (first element).
+- dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
 
 Text to tokenize:
-${cleanedText}`,
+${chunk}`,
     }],
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '';
-  return JSON.parse(raw) as ParsedContent;
+  console.log(`[tokenize] chunk=${chunk.length}, stop=${message.stop_reason}, response=\n${raw}\n---`);
+  const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const compact = JSON.parse(json) as CompactResponse;
+
+  return compact.map((tokens, index) => ({
+    sentence_index: index,
+    raw: tokens.map(t => t[0]).join(''),
+    tokens: tokens.map(t => ({
+      surface: t[0],
+      dictionary_form: t[1],
+      reading: t[2],
+      is_content_word: t[3] === 1,
+    })),
+  }));
+}
+
+export async function tokenizeText(cleanedText: string): Promise<ParsedContent> {
+  const chunks = splitIntoChunks(cleanedText);
+  const results: ParsedContent = [];
+  let sentenceOffset = 0;
+
+  for (const chunk of chunks) {
+    const chunkResult = await tokenizeChunk(chunk);
+    results.push(...chunkResult.map(s => ({ ...s, sentence_index: s.sentence_index + sentenceOffset })));
+    sentenceOffset += chunkResult.length;
+  }
+
+  return results;
 }
 
 interface GrammarHint {
@@ -75,7 +131,8 @@ Sentence: ${sentence}`,
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
-  return JSON.parse(raw) as GrammarHint[];
+  const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(json) as GrammarHint[];
 }
 
 export async function describeGrammarPattern(pattern: string): Promise<string> {
@@ -125,5 +182,6 @@ Sentence: ${contextSentence}`,
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
-  return JSON.parse(raw) as TranslationResult;
+  const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(json) as TranslationResult;
 }

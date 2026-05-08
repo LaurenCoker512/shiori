@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { GrammarTooltip } from '@/components/reader/GrammarTooltip';
 import type { GrammarPattern } from '@/lib/types';
 
@@ -55,5 +56,52 @@ describe('GrammarTooltip', () => {
     await waitFor(() => {
       expect(screen.getByText('No grammar patterns found')).toBeInTheDocument();
     });
+  });
+
+  it('initialPatterns skips fetch and renders patterns immediately', () => {
+    vi.spyOn(global, 'fetch');
+    render(
+      <GrammarTooltip
+        textId={1}
+        sentenceIndex={0}
+        initialPatterns={[mockPattern]}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(screen.getByText('が好き')).toBeInTheDocument();
+  });
+
+  it('calls onPatternsLoaded with fetched patterns', async () => {
+    const onPatternsLoaded = vi.fn();
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ patterns: [mockPattern] }), { status: 200 }),
+    );
+    render(
+      <GrammarTooltip
+        textId={1}
+        sentenceIndex={0}
+        onPatternsLoaded={onPatternsLoaded}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onPatternsLoaded).toHaveBeenCalledWith([mockPattern]);
+    });
+  });
+
+  it('Hide button calls onClose', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ patterns: [mockPattern] }), { status: 200 }),
+    );
+    render(<GrammarTooltip textId={1} sentenceIndex={0} onClose={onClose} />);
+
+    await waitFor(() => expect(screen.getByText('が好き')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Hide grammar analysis' }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

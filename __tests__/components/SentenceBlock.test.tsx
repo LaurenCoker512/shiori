@@ -8,7 +8,6 @@ const mockToken = {
   surface: 'テスト',
   dictionary_form: 'テスト',
   reading: 'テスト',
-  pos: 'noun',
   is_content_word: true,
 };
 
@@ -83,7 +82,7 @@ describe('SentenceBlock', () => {
     expect(container.querySelector('[data-grammar-trigger]')).not.toBeInTheDocument();
   });
 
-  it('pointer on sentence container triggers grammar analysis', async () => {
+  it('clicking sentence shows confirmation prompt', async () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
@@ -100,18 +99,92 @@ describe('SentenceBlock', () => {
     );
 
     const paragraph = container.querySelector('[data-grammar-trigger]')!;
-    await user.pointer({ target: paragraph });
+    await user.click(paragraph);
+
+    expect(screen.getByText(/Analyze grammar for this sentence\?/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('clicking Analyze in the prompt triggers grammar fetch', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
+    );
+
+    const { container } = render(
+      <SentenceBlock
+        sentence={bodySentence}
+        wordStatusMap={{}}
+        furiganaOverrides={{}}
+        showFurigana={true}
+        textId={1}
+      />,
+    );
+
+    await user.click(container.querySelector('[data-grammar-trigger]')!);
+    await user.click(screen.getByRole('button', { name: 'Analyze' }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/sentences/1/1/grammar');
     });
   });
 
-  it('pointer on [data-word] child does not trigger grammar analysis', async () => {
+  it('clicking Cancel dismisses the prompt without fetching', async () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
     );
+
+    const { container } = render(
+      <SentenceBlock
+        sentence={bodySentence}
+        wordStatusMap={{}}
+        furiganaOverrides={{}}
+        showFurigana={true}
+        textId={1}
+      />,
+    );
+
+    await user.click(container.querySelector('[data-grammar-trigger]')!);
+    expect(screen.getByText(/Analyze grammar for this sentence\?/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText(/Analyze grammar for this sentence\?/)).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('after patterns are fetched and hidden, prompt offers to show instead of analyze', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
+    );
+
+    const { container } = render(
+      <SentenceBlock
+        sentence={bodySentence}
+        wordStatusMap={{}}
+        furiganaOverrides={{}}
+        showFurigana={true}
+        textId={1}
+      />,
+    );
+
+    // Fetch and then hide
+    await user.click(container.querySelector('[data-grammar-trigger]')!);
+    await user.click(screen.getByRole('button', { name: 'Analyze' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hide grammar analysis' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Hide grammar analysis' }));
+
+    // Re-click sentence: should now show 'Show grammar analysis?' prompt
+    await user.click(container.querySelector('[data-grammar-trigger]')!);
+    expect(screen.getByText(/Show grammar analysis\?/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument();
+  });
+
+  it('clicking [data-word] child does not show prompt', async () => {
+    const user = userEvent.setup();
 
     const { container } = render(
       <SentenceBlock
@@ -124,8 +197,8 @@ describe('SentenceBlock', () => {
     );
 
     const wordEl = container.querySelector('[data-word]')!;
-    await user.pointer({ target: wordEl });
+    await user.click(wordEl);
 
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Analyze grammar/)).not.toBeInTheDocument();
   });
 });

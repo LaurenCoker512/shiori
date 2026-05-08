@@ -9,7 +9,6 @@ const mockQuery = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/claude', () => ({ tokenizeText: mockTokenizeText }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
 
-import * as formatDetection from '@/lib/format-detection';
 import { POST } from '@/app/api/texts/route';
 import type { ParsedContent } from '@/lib/types';
 
@@ -29,28 +28,14 @@ const sampleParsedContent: ParsedContent = [
     sentence_index: 0,
     raw: '猫が好きです。',
     tokens: [
-      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
-      { surface: 'が', dictionary_form: 'が', reading: 'が', pos: 'particle', is_content_word: false },
-      { surface: '好き', dictionary_form: '好き', reading: 'すき', pos: 'adjective', is_content_word: true },
-      { surface: 'です', dictionary_form: 'です', reading: 'です', pos: 'other', is_content_word: false },
-      { surface: '。', dictionary_form: '。', reading: '。', pos: 'punctuation', is_content_word: false },
+      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', is_content_word: true },
+      { surface: 'が', dictionary_form: 'が', reading: 'が', is_content_word: false },
+      { surface: '好き', dictionary_form: '好き', reading: 'すき', is_content_word: true },
+      { surface: 'です', dictionary_form: 'です', reading: 'です', is_content_word: false },
+      { surface: '。', dictionary_form: '。', reading: '。', is_content_word: false },
     ],
   },
 ];
-
-describe('POST /api/texts — unit', () => {
-  it('calls detectFormat when no formatOverride is provided', async () => {
-    mockTokenizeText.mockResolvedValue(sampleParsedContent);
-    mockQuery
-      .mockResolvedValueOnce({ rows: [{ id: 1 }] })
-      .mockResolvedValue({ rows: [] });
-
-    const spy = vi.spyOn(formatDetection, 'detectFormat');
-    await POST(makeRequest({ title: 'Test', content: '猫が好きです。' }));
-    expect(spy).toHaveBeenCalledWith('猫が好きです。');
-    spy.mockRestore();
-  });
-});
 
 describeIfDb('POST /api/texts — integration', () => {
   let testPool: Pool;
@@ -85,7 +70,7 @@ describeIfDb('POST /api/texts — integration', () => {
     expect(data).toHaveProperty('error');
   });
 
-  it('inserts text and words for valid markdown body, returns { id }', async () => {
+  it('inserts text and words for valid content, returns { id }', async () => {
     mockTokenizeText.mockResolvedValue(sampleParsedContent);
 
     const response = await POST(makeRequest({ title: '猫の話', content: '猫が好きです。' }));
@@ -102,34 +87,6 @@ describeIfDb('POST /api/texts — integration', () => {
     expect(forms).toContain('猫');
     expect(forms).toContain('好き');
     expect(forms).not.toContain('が');
-  });
-
-  it('processes HTML body via processHtml and inserts correctly', async () => {
-    mockTokenizeText.mockResolvedValue(sampleParsedContent);
-
-    const response = await POST(makeRequest({ title: 'HTML Test', content: '<p>猫が好きです。</p>' }));
-    expect(response.status).toBe(200);
-
-    // tokenizeText should receive stripped plain text, not HTML
-    const calledWith = mockTokenizeText.mock.calls[0][0] as string;
-    expect(calledWith).toBe('猫が好きです。');
-
-    const texts = await testPool.query<{ raw_content: string }>('SELECT raw_content FROM texts');
-    expect(texts.rows[0].raw_content).toBe('<p>猫が好きです。</p>');
-  });
-
-  it('uses processHtml when formatOverride is html on markdown input', async () => {
-    mockTokenizeText.mockResolvedValue(sampleParsedContent);
-
-    await POST(makeRequest({
-      title: 'Override Test',
-      content: '# 猫が好きです',
-      formatOverride: 'html',
-    }));
-
-    // processHtml on plain text produces no sentinel; processMarkdown would produce __HEADING_1__
-    const calledWith = mockTokenizeText.mock.calls[0][0] as string;
-    expect(calledWith).not.toContain('__HEADING_');
   });
 
   it('returns 500 and persists nothing when tokenizer throws', async () => {
@@ -150,11 +107,11 @@ describeIfDb('POST /api/texts — integration', () => {
         sentence_index: 0,
         raw: '猫が猫です。',
         tokens: [
-          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
-          { surface: 'が', dictionary_form: 'が', reading: 'が', pos: 'particle', is_content_word: false },
-          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
-          { surface: 'です', dictionary_form: 'です', reading: 'です', pos: 'other', is_content_word: false },
-          { surface: '。', dictionary_form: '。', reading: '。', pos: 'punctuation', is_content_word: false },
+          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', is_content_word: true },
+          { surface: 'が', dictionary_form: 'が', reading: 'が', is_content_word: false },
+          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', is_content_word: true },
+          { surface: 'です', dictionary_form: 'です', reading: 'です', is_content_word: false },
+          { surface: '。', dictionary_form: '。', reading: '。', is_content_word: false },
         ],
       },
     ];

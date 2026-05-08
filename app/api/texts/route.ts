@@ -1,5 +1,4 @@
-import { detectFormat } from '@/lib/format-detection';
-import { processMarkdown, processHtml, parseHeadingSentinels } from '@/lib/text-processing';
+import { parseHeadingSentinels } from '@/lib/text-processing';
 import { tokenizeText } from '@/lib/claude';
 import { query } from '@/lib/db';
 
@@ -14,23 +13,20 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as {
     title?: string;
     content?: string;
-    formatOverride?: 'html' | 'markdown';
   };
 
   if (!body.title?.trim()) {
     return jsonResponse({ error: 'Title is required' }, 400);
   }
 
-  const format = body.formatOverride ?? detectFormat(body.content ?? '');
-  const cleanedText = format === 'html'
-    ? processHtml(body.content ?? '')
-    : await processMarkdown(body.content ?? '');
+  const cleanedText = body.content ?? '';
 
   let parsedContent;
   try {
     const tokenized = await tokenizeText(cleanedText);
     parsedContent = parseHeadingSentinels(tokenized);
-  } catch {
+  } catch (err) {
+    console.error('Tokenization error:', err);
     return jsonResponse({ error: 'Tokenization failed' }, 500);
   }
 

@@ -16,6 +16,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
   const [showFurigana, setShowFurigana] = useState(true);
   const [wordMap, setWordMap] = useState<Record<string, Word>>(wordStatusMap);
   const [popoverWord, setPopoverWord] = useState<Word | null>(null);
+  const [popoverAnchor, setPopoverAnchor] = useState<DOMRect | null>(null);
   const [overrideMap, setOverrideMap] = useState<Record<string, string>>(() => {
     const map: Record<string, string> = {};
     for (const override of furiganaOverrides) {
@@ -39,10 +40,11 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     return `${word.dictionary_form}|${word.reading}`;
   }
 
-  function handleWordClick(word: Word) {
+  function handleWordClick(word: Word, anchor: DOMRect) {
     const key = wordKey(word);
     const originalWord = wordMap[key] ?? word;
 
+    setPopoverAnchor(anchor);
     if (word.status === 'unseen') {
       const advanced: Word = { ...word, status: 'seen' };
       setWordMap(prev => ({ ...prev, [key]: advanced }));
@@ -92,9 +94,10 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           />
         ))}
       </div>
-      {popoverWord !== null && (
+      {popoverWord !== null && popoverAnchor !== null && (
         <WordPopover
           word={popoverWord}
+          anchorRect={popoverAnchor}
           onClose={() => setPopoverWord(null)}
           onStatusUpdate={handleStatusUpdate}
         />

@@ -9,36 +9,43 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }));
 
 import { tokenizeText, analyzeGrammar, describeGrammarPattern, translateWord } from '@/lib/claude';
-import type { ParsedContent } from '@/lib/types';
 
 beforeEach(() => {
   mockCreate.mockReset();
 });
 
 describe('tokenizeText', () => {
-  it('returns ParsedContent when mock returns valid JSON array', async () => {
-    const payload: ParsedContent = [
-      {
-        sentence_index: 0,
-        raw: '猫が好きです。',
-        tokens: [
-          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
-        ],
-      },
+  it('maps compact array-tuple response to ParsedContent', async () => {
+    // Compact format: array of sentences, each sentence is array of [surface, dict, reading, is_content]
+    const compact = [
+      [
+        ['猫', '猫', 'ねこ', 1],
+        ['が', 'が', 'が', 0],
+        ['好き', '好き', 'すき', 1],
+        ['です', 'だ', 'です', 0],
+        ['。', '。', '。', 0],
+      ],
     ];
     mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify(payload) }],
+      content: [{ type: 'text', text: JSON.stringify(compact) }],
+      stop_reason: 'end_turn',
     });
 
     const result = await tokenizeText('猫が好きです。');
-    expect(result).toEqual(payload);
+    expect(result).toHaveLength(1);
     expect(result[0].sentence_index).toBe(0);
+    expect(result[0].raw).toBe('猫が好きです。');
     expect(result[0].tokens[0].surface).toBe('猫');
+    expect(result[0].tokens[0].dictionary_form).toBe('猫');
+    expect(result[0].tokens[0].reading).toBe('ねこ');
+    expect(result[0].tokens[0].is_content_word).toBe(true);
+    expect(result[0].tokens[1].is_content_word).toBe(false);
   });
 
   it('throws SyntaxError when mock returns invalid JSON', async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: 'not valid json' }],
+      stop_reason: 'end_turn',
     });
 
     await expect(tokenizeText('テスト')).rejects.toThrow(SyntaxError);

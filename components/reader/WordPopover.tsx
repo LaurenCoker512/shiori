@@ -1,23 +1,50 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Word } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
 
 interface WordPopoverProps {
   word: Word;
+  anchorRect: DOMRect;
   onClose: () => void;
   onStatusUpdate: (word: Word) => void;
 }
 
-export function WordPopover({ word, onClose, onStatusUpdate }: WordPopoverProps) {
+const MARGIN = 12;
+
+export function WordPopover({ word, anchorRect, onClose, onStatusUpdate }: WordPopoverProps) {
   const [loadedTranslations, setLoadedTranslations] = useState<string[] | null>(null);
   const [translationLoading, setTranslationLoading] = useState(
     word.translation === null && word.user_translation === null,
   );
   const [markingKnown, setMarkingKnown] = useState(false);
+  const [positionStyle, setPositionStyle] = useState<React.CSSProperties>({ visibility: 'hidden' });
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = popoverRef.current;
+    if (el === null) return;
+    const { offsetWidth: w, offsetHeight: h } = el;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let pos: React.CSSProperties;
+    if (vw >= 640) {
+      const top = Math.max(MARGIN, Math.min(anchorRect.top, vh - h - MARGIN));
+      pos = { position: 'fixed', right: MARGIN, top };
+    } else {
+      const cx = anchorRect.left + anchorRect.width / 2;
+      const left = Math.max(MARGIN, Math.min(cx - w / 2, vw - w - MARGIN));
+      const spaceBelow = vh - anchorRect.bottom - MARGIN;
+      const top = spaceBelow >= h
+        ? anchorRect.bottom + MARGIN
+        : anchorRect.top - h - MARGIN;
+      pos = { position: 'fixed', left, top };
+    }
+    setPositionStyle({ ...pos, visibility: 'visible' });
+  }, [anchorRect, translationLoading, loadedTranslations]);
 
   useEffect(() => {
     if (word.translation !== null || word.user_translation !== null) return;
@@ -80,6 +107,7 @@ export function WordPopover({ word, onClose, onStatusUpdate }: WordPopoverProps)
       ref={popoverRef}
       role="dialog"
       aria-label={`Word details: ${word.dictionary_form}`}
+      style={positionStyle}
       className="z-50 bg-white border rounded shadow-lg p-3 min-w-[12rem] max-w-xs"
     >
       <div aria-live="polite" aria-atomic="true">

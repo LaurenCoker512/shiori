@@ -7,20 +7,32 @@ import { Spinner } from '@/components/ui/Spinner';
 interface GrammarTooltipProps {
   textId: number;
   sentenceIndex: number;
+  initialPatterns?: GrammarPattern[] | null;
+  onPatternsLoaded?: (patterns: GrammarPattern[]) => void;
   onClose: () => void;
 }
 
-export function GrammarTooltip({ textId, sentenceIndex, onClose }: GrammarTooltipProps) {
-  const [patterns, setPatterns] = useState<GrammarPattern[] | null>(null);
-  const [loading, setLoading] = useState(true);
+export function GrammarTooltip({
+  textId,
+  sentenceIndex,
+  initialPatterns,
+  onPatternsLoaded,
+  onClose,
+}: GrammarTooltipProps) {
+  const hasInitialData = Array.isArray(initialPatterns);
+  const [patterns, setPatterns] = useState<GrammarPattern[] | null>(hasInitialData ? initialPatterns : null);
+  const [loading, setLoading] = useState(!hasInitialData);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    if (hasInitialData) return;
     fetch(`/api/sentences/${textId}/${sentenceIndex}/grammar`)
       .then(r => r.json())
       .then((data: { patterns?: GrammarPattern[] }) => {
-        setPatterns(Array.isArray(data.patterns) ? data.patterns : []);
+        const fetched = Array.isArray(data.patterns) ? data.patterns : [];
+        setPatterns(fetched);
         setLoading(false);
+        onPatternsLoaded?.(fetched);
       })
       .catch(() => {
         setError(true);
@@ -29,12 +41,22 @@ export function GrammarTooltip({ textId, sentenceIndex, onClose }: GrammarToolti
   }, [textId, sentenceIndex]);
 
   return (
-    <div className="mt-2 p-3 bg-gray-50 border rounded text-sm" aria-label="Grammar analysis">
-      <div aria-live="polite" aria-atomic="true">
+    <span className="block mt-2 p-3 bg-gray-50 border rounded text-sm" aria-label="Grammar analysis">
+      <span className="flex justify-between items-start mb-1">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Grammar</span>
+        <button
+          className="text-gray-400 hover:text-gray-600 text-xs leading-none ml-2"
+          aria-label="Hide grammar analysis"
+          onClick={e => { e.stopPropagation(); onClose(); }}
+        >
+          Hide
+        </button>
+      </span>
+      <span aria-live="polite" aria-atomic="true">
         {loading && <Spinner />}
-        {!loading && error && <p>Grammar analysis unavailable</p>}
+        {!loading && error && <span>Grammar analysis unavailable</span>}
         {!loading && !error && patterns !== null && patterns.length === 0 && (
-          <p className="text-gray-500">No grammar patterns found</p>
+          <span className="text-gray-500">No grammar patterns found</span>
         )}
         {!loading && !error && patterns !== null && patterns.length > 0 && (
           <ul>
@@ -51,7 +73,7 @@ export function GrammarTooltip({ textId, sentenceIndex, onClose }: GrammarToolti
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }

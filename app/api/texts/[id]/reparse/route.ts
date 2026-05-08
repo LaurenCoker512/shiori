@@ -1,5 +1,4 @@
-import { detectFormat } from '@/lib/format-detection';
-import { processMarkdown, processHtml, parseHeadingSentinels } from '@/lib/text-processing';
+import { parseHeadingSentinels } from '@/lib/text-processing';
 import { tokenizeText } from '@/lib/claude';
 import { query } from '@/lib/db';
 
@@ -17,8 +16,6 @@ export async function POST(
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
 
-  const body = await request.json() as { formatOverride?: 'html' | 'markdown' };
-
   const textResult = await query<{ raw_content: string }>(
     'SELECT raw_content FROM texts WHERE id = $1 AND user_id = 1',
     [id],
@@ -28,11 +25,7 @@ export async function POST(
     return jsonResponse({ error: 'Not found' }, 404);
   }
 
-  const rawContent = textResult.rows[0].raw_content;
-  const format = body.formatOverride ?? detectFormat(rawContent);
-  const cleanedText = format === 'html'
-    ? processHtml(rawContent)
-    : await processMarkdown(rawContent);
+  const cleanedText = textResult.rows[0].raw_content;
 
   const tokenized = await tokenizeText(cleanedText);
   const parsedContent = parseHeadingSentinels(tokenized);
