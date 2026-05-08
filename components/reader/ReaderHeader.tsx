@@ -16,6 +16,7 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
   const [title, setTitle] = useState(initialTitle);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReparsing, setIsReparsing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [renameError, setRenameError] = useState('');
 
@@ -42,6 +43,13 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
     setIsRenaming(false);
   }
 
+  async function handleReparse() {
+    setIsReparsing(true);
+    await fetch(`/api/texts/${textId}/reparse`, { method: 'POST' });
+    setIsReparsing(false);
+    router.refresh();
+  }
+
   async function handleDelete() {
     await fetch(`/api/texts/${textId}`, { method: 'DELETE' });
     router.push('/');
@@ -58,7 +66,13 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
         >
           ← Library
         </Link>
-        <OverflowMenu onRename={startRename} onDelete={() => setIsDeleting(true)} />
+        {isReparsing ? (
+          <span className="font-en text-[12px]" style={{ color: 'var(--yg-ink-muted)' }}>
+            Reparsing…
+          </span>
+        ) : (
+          <OverflowMenu onRename={startRename} onDelete={() => setIsDeleting(true)} onReparse={() => { void handleReparse(); }} />
+        )}
       </div>
 
       {/* Title card */}

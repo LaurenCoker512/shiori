@@ -5,9 +5,10 @@ import { useState } from 'react';
 interface OverflowMenuProps {
   onRename: () => void;
   onDelete: () => void;
+  onReparse?: () => void;
 }
 
-export function OverflowMenu({ onRename, onDelete }: OverflowMenuProps) {
+export function OverflowMenu({ onRename, onDelete, onReparse }: OverflowMenuProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,6 +28,16 @@ export function OverflowMenu({ onRename, onDelete }: OverflowMenuProps) {
           aria-label="Text options"
           className="absolute right-0 top-full mt-1 w-36 bg-white border rounded shadow-md z-20"
         >
+          {onReparse !== undefined && (
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full text-left min-h-11 px-4 py-2 text-sm hover:bg-gray-50 flex items-center"
+              onClick={() => { setOpen(false); onReparse(); }}
+            >
+              Reparse
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"
