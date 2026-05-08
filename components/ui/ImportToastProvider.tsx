@@ -7,7 +7,7 @@ import type { ImportJob } from './ImportToast';
 
 const STORAGE_KEY = 'shiori-import';
 const IMPORT_EVENT = 'shiori-import-created';
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 10000;
 
 interface StoredImport {
   id: number;
