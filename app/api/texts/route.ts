@@ -1,7 +1,6 @@
-import { parseHeadingSentinels } from '@/lib/text-processing';
-import { tokenizeText } from '@/lib/claude';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { processImport } from '@/lib/processImport';
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -23,33 +22,17 @@ export async function POST(request: Request): Promise<Response> {
     return jsonResponse({ error: 'Title is required' }, 400);
   }
 
-  const cleanedText = body.content ?? '';
-
-  let parsedContent;
-  try {
-    const tokenized = await tokenizeText(cleanedText);
-    parsedContent = parseHeadingSentinels(tokenized);
-  } catch (err) {
-    console.error('Tokenization error:', err);
-    return jsonResponse({ error: 'Tokenization failed' }, 500);
-  }
+  const content = body.content ?? '';
 
   const textResult = await query<{ id: number }>(
-    `INSERT INTO texts (user_id, title, raw_content, parsed_content) VALUES ($1, $2, $3, $4) RETURNING id`,
-    [user.id, body.title.trim(), body.content ?? '', JSON.stringify(parsedContent)],
+    `INSERT INTO texts (user_id, title, raw_content, parsed_content, import_status)
+     VALUES ($1, $2, $3, '[]'::jsonb, 'pending') RETURNING id`,
+    [user.id, body.title.trim(), content],
   );
   const textId = textResult.rows[0].id;
 
-  const contentWords = parsedContent.flatMap(s => s.tokens).filter(t => t.is_content_word);
+  // Fire-and-forget — tokenization continues after this response returns
+  void processImport(textId, user.id, content);
 
-  for (const token of contentWords) {
-    await query(
-      `INSERT INTO words (user_id, dictionary_form, reading)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-      [user.id, token.dictionary_form, token.reading],
-    );
-  }
-
-  return jsonResponse({ id: textId });
+  return jsonResponse({ id: textId }, 202);
 }

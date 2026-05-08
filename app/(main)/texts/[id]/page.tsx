@@ -9,6 +9,7 @@ interface TextRow {
   id: number;
   title: string;
   parsed_content: ParsedContent;
+  import_status: string;
 }
 
 export default async function ReaderPage({ params }: { params: { id: string } }) {
@@ -21,11 +22,12 @@ export default async function ReaderPage({ params }: { params: { id: string } })
   const uid = user.id;
 
   const textResult = await query<TextRow>(
-    'SELECT id, title, parsed_content FROM texts WHERE id = $1 AND user_id = $2',
+    'SELECT id, title, parsed_content, import_status FROM texts WHERE id = $1 AND user_id = $2',
     [id, uid],
   );
 
   if (textResult.rows.length === 0) notFound();
+  if (textResult.rows[0].import_status !== 'ready') redirect('/');
 
   await query('UPDATE texts SET last_read_at = NOW() WHERE id = $1', [id]);
 

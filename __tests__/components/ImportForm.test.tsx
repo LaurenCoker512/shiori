@@ -56,7 +56,7 @@ describe('ImportForm', () => {
 
   it('long text warning does not block submission', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ id: 42 }), { status: 200 }),
+      new Response(JSON.stringify({ id: 42 }), { status: 202 }),
     );
     const user = userEvent.setup();
     render(<ImportForm />);
@@ -70,7 +70,7 @@ describe('ImportForm', () => {
     expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: /^import$/i }));
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/texts/42');
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
   });
 
@@ -90,16 +90,17 @@ describe('ImportForm', () => {
     await user.click(screen.getByRole('button', { name: /^import$/i }));
     expect(screen.getByRole('status')).toBeInTheDocument();
 
-    resolveRequest(new Response(JSON.stringify({ id: 1 }), { status: 200 }));
+    resolveRequest(new Response(JSON.stringify({ id: 1 }), { status: 202 }));
     await waitFor(() => {
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
 
-  it('on success: calls router.push with the correct text id', async () => {
+  it('on success: redirects to library and writes pending import to localStorage', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ id: 99 }), { status: 200 }),
+      new Response(JSON.stringify({ id: 99 }), { status: 202 }),
     );
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     const user = userEvent.setup();
     render(<ImportForm />);
     await user.type(screen.getByLabelText(/title/i), 'My Title');
@@ -109,8 +110,12 @@ describe('ImportForm', () => {
     });
     await user.click(screen.getByRole('button', { name: /^import$/i }));
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/texts/99');
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
+    expect(setItemSpy).toHaveBeenCalledWith(
+      'shiori-import',
+      JSON.stringify({ id: 99, title: 'My Title' }),
+    );
   });
 
   it('on error: shows inline error message, form remains editable', async () => {

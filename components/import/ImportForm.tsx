@@ -49,7 +49,11 @@ export function ImportForm() {
         return;
       }
       const data = await response.json() as { id: number };
-      router.push(`/texts/${data.id}`);
+      try {
+        localStorage.setItem('shiori-import', JSON.stringify({ id: data.id, title: title.trim() }));
+        window.dispatchEvent(new Event('shiori-import-created'));
+      } catch { /* storage unavailable — toast won't appear but import still works */ }
+      router.push('/');
     } catch {
       setError('Import failed');
     } finally {
