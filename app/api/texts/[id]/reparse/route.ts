@@ -29,7 +29,10 @@ export async function POST(
     return jsonResponse({ error: 'Not found' }, 404);
   }
 
-  const cleanedText = textResult.rows[0].raw_content;
+  const cleanedText = textResult.rows[0].raw_content
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n');
 
   const tokenized = await tokenizeText(cleanedText);
   const parsedContent = parseHeadingSentinels(tokenized);
