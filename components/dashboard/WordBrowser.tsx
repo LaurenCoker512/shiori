@@ -7,14 +7,6 @@ import { Spinner } from '@/components/ui/Spinner';
 
 const PAGE_SIZE = 50;
 
-interface WordBrowserProps {
-  initialWords?: Word[];
-  initialTotal?: number;
-  initialKnownCount?: number;
-  initialSeenCount?: number;
-  initialUnseenCount?: number;
-}
-
 const STATUS_FILTERS: { value: '' | WordStatus; label: string }[] = [
   { value: '',        label: 'All'    },
   { value: 'unseen',  label: 'New'    },
@@ -34,21 +26,21 @@ function statusBg(status: WordStatus): string {
   return 'transparent';
 }
 
-export function WordBrowser({ initialWords = [], initialTotal = 0, initialKnownCount = 0, initialSeenCount = 0, initialUnseenCount = 0 }: WordBrowserProps) {
-  const [words, setWords] = useState<Word[]>(initialWords);
-  const [total, setTotal] = useState(initialTotal);
-  const [knownCount, setKnownCount] = useState(initialKnownCount);
-  const [seenCount, setSeenCount] = useState(initialSeenCount);
-  const [unseenCount, setUnseenCount] = useState(initialUnseenCount);
-  const [loading, setLoading] = useState(false);
+export function WordBrowser() {
+  const [words, setWords] = useState<Word[]>([]);
+  const [total, setTotal] = useState(0);
+  const [knownCount, setKnownCount] = useState(0);
+  const [seenCount, setSeenCount] = useState(0);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'' | WordStatus>('');
   const [jlpt, setJlpt] = useState<'' | JlptLevel>('');
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [fetchingTranslationIds, setFetchingTranslationIds] = useState<Set<number>>(new Set());
 
-  const isMountedRef = useRef(false);
   const prevSearchRef = useRef('');
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -69,11 +61,6 @@ export function WordBrowser({ initialWords = [], initialTotal = 0, initialKnownC
   }, []);
 
   useEffect(() => {
-    if (!isMountedRef.current) {
-      isMountedRef.current = true;
-      return;
-    }
-
     const isSearchChange = prevSearchRef.current !== search;
     prevSearchRef.current = search;
 
@@ -84,6 +71,28 @@ export function WordBrowser({ initialWords = [], initialTotal = 0, initialKnownC
 
     void fetchWords(search, status, jlpt, page);
   }, [search, status, jlpt, page, fetchWords]);
+
+  async function lookUpTranslation(word: Word) {
+    setFetchingTranslationIds(prev => new Set(prev).add(word.id));
+    try {
+      const res = await fetch(`/api/words/${word.id}/translation`);
+      if (res.ok) {
+        const data = await res.json() as { translations: string[]; jlpt_level: string | null };
+        const translationJson = JSON.stringify(data.translations);
+        setWords(prev => prev.map(w =>
+          w.id === word.id
+            ? { ...w, translation: translationJson, jlpt_level: (data.jlpt_level as Word['jlpt_level']) ?? w.jlpt_level }
+            : w,
+        ));
+      }
+    } finally {
+      setFetchingTranslationIds(prev => {
+        const next = new Set(prev);
+        next.delete(word.id);
+        return next;
+      });
+    }
+  }
 
   async function saveTranslation(word: Word) {
     const updated = editValue.trim() !== '' ? editValue.trim() : null;
@@ -226,8 +235,24 @@ export function WordBrowser({ initialWords = [], initialTotal = 0, initialKnownC
                                 <span className="block text-xs text-gray-500 truncate">{claudeGloss}</span>
                               )}
                             </>
-                          ) : (
+                          ) : claudeGloss !== '' ? (
                             <span className="block truncate" style={{ color: 'var(--yg-ink-soft)' }}>{claudeGloss}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Look up translation for ${word.dictionary_form}`}
+                              disabled={fetchingTranslationIds.has(word.id)}
+                              onClick={() => { void lookUpTranslation(word); }}
+                              className="font-en text-[11px] px-2 py-0.5 rounded border transition-opacity disabled:opacity-50"
+                              style={{
+                                color: 'var(--yg-ink-muted)',
+                                borderColor: 'var(--yg-rule)',
+                                background: 'var(--yg-paper)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {fetchingTranslationIds.has(word.id) ? '…' : 'Look up'}
+                            </button>
                           )}
                         </div>
                         <button
