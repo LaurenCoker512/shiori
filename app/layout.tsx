@@ -20,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       <head>
+        {/* Restore dark mode class before first paint to avoid FOUC */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('shiori-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
         {/* Zen Old Mincho for Japanese text — full character set via Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

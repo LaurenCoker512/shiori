@@ -19,6 +19,46 @@
   --yg-indigo-dark: #34465c;
   --yg-seen:        rgba(207, 139, 151, 0.18);
   --yg-known:       rgba(138, 166, 138, 0.20);
+  --yg-nav-bg:      rgba(252, 247, 232, 0.70);
+  /* Card gradient endpoints — light mode mirrors the main tokens */
+  --yg-card-coral-hi:  #cf8b97;
+  --yg-card-coral-lo:  #9d5a6a;
+  --yg-card-bamboo-hi: #8aa68a;
+  --yg-card-bamboo-lo: #5e7c61;
+  --yg-card-indigo-hi: #5b7591;
+  --yg-card-indigo-lo: #34465c;
+  --yg-card-gold-hi:   #b89968;
+  --yg-card-gold-lo:   #7a614a;
+}
+
+/* Yugure dark — moonlit sakura at night (Hasui woodblock vibe) */
+html.dark {
+  --yg-bg:          #171c2a;
+  --yg-paper:       #1f2538;
+  --yg-paper-hi:    #283049;
+  --yg-ink:         #ecdfd0;
+  --yg-ink-soft:    #a9a39a;
+  --yg-ink-muted:   #6e6a64;
+  --yg-rule:        rgba(236, 223, 208, 0.10);
+  --yg-rule-soft:   rgba(236, 223, 208, 0.05);
+  --yg-coral:       #dba0aa;
+  --yg-coral-dark:  #a86c7a;
+  --yg-bamboo:      #9ab59a;
+  --yg-bamboo-dark: #6a8a6e;
+  --yg-indigo:      #7d99b8;
+  --yg-indigo-dark: #3e5274;
+  --yg-seen:        rgba(219, 160, 170, 0.20);
+  --yg-known:       rgba(154, 181, 154, 0.18);
+  --yg-nav-bg:      rgba(40, 48, 73, 0.85);
+  /* Card gradients — shifted to dark variants so fills don't pop against the night bg */
+  --yg-card-coral-hi:  #a86c7a;
+  --yg-card-coral-lo:  #6e3f4e;
+  --yg-card-bamboo-hi: #6a8a6e;
+  --yg-card-bamboo-lo: #3e5c41;
+  --yg-card-indigo-hi: #3e5274;
+  --yg-card-indigo-lo: #253349;
+  --yg-card-gold-hi:   #7a614a;
+  --yg-card-gold-lo:   #4a3a2e;
 }
 
 body {
@@ -38,6 +78,12 @@ body::before {
     radial-gradient(ellipse at bottom left, rgba(91,117,145,0.06), transparent 55%);
   pointer-events: none;
   z-index: 0;
+}
+
+html.dark body::before {
+  background:
+    radial-gradient(ellipse at top right, rgba(219,160,170,0.07), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(125,153,184,0.06), transparent 55%);
 }
 
 /* Word status tints */

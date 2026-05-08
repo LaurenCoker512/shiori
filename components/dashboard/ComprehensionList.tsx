@@ -14,10 +14,10 @@ interface ComprehensionListProps {
 const MOODS = ['persimmon', 'moss', 'twilight', 'gold'];
 
 const MOOD_GRADIENTS: Record<string, string> = {
-  persimmon: 'linear-gradient(135deg, var(--yg-coral), var(--yg-coral-dark))',
-  moss:      'linear-gradient(135deg, var(--yg-bamboo), var(--yg-bamboo-dark))',
-  twilight:  'linear-gradient(135deg, var(--yg-indigo), var(--yg-indigo-dark))',
-  gold:      'linear-gradient(135deg, #b89968, #7a614a)',
+  persimmon: 'linear-gradient(135deg, var(--yg-card-coral-hi), var(--yg-card-coral-lo))',
+  moss:      'linear-gradient(135deg, var(--yg-card-bamboo-hi), var(--yg-card-bamboo-lo))',
+  twilight:  'linear-gradient(135deg, var(--yg-card-indigo-hi), var(--yg-card-indigo-lo))',
+  gold:      'linear-gradient(135deg, var(--yg-card-gold-hi), var(--yg-card-gold-lo))',
 };
 
 export function ComprehensionList({ comprehension }: ComprehensionListProps) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SessionUser } from '@/lib/session';
@@ -38,8 +38,20 @@ export function SiteNav({ user }: { user: SessionUser }) {
   const router = useRouter();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(user.name);
+  const [isDark, setIsDark] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const firstLetter = nameValue.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+  }, []);
+
+  function toggleDark() {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    try { localStorage.setItem('shiori-theme', next ? 'dark' : 'light'); } catch { /* */ }
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -72,7 +84,7 @@ export function SiteNav({ user }: { user: SessionUser }) {
       aria-label="Site navigation"
       className="fixed top-0 left-0 right-0 z-20 h-16 flex items-center px-8"
       style={{
-        background: 'rgba(252, 247, 232, 0.70)',
+        background: 'var(--yg-nav-bg)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         borderBottom: '1px solid var(--yg-rule)',
@@ -103,7 +115,7 @@ export function SiteNav({ user }: { user: SessionUser }) {
               border: 'none',
               background: active ? '#fff' : 'transparent',
               boxShadow: active ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              color: active ? 'var(--yg-ink)' : 'var(--yg-ink-soft)',
+              color: active ? '#2c2a28' : 'var(--yg-ink-soft)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -125,7 +137,6 @@ export function SiteNav({ user }: { user: SessionUser }) {
                 <span>{item.label}</span>
                 <span
                   className="font-jp text-[11px] opacity-85"
-                  style={{ color: active ? 'var(--yg-coral)' : 'var(--yg-ink-muted)' }}
                 >
                   {item.jp}
                 </span>
@@ -164,6 +175,20 @@ export function SiteNav({ user }: { user: SessionUser }) {
             {nameValue}
           </button>
         )}
+        <button
+          type="button"
+          onClick={toggleDark}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="w-[34px] h-[34px] flex items-center justify-center rounded-full border transition-colors shrink-0"
+          style={{
+            borderColor: 'var(--yg-rule)',
+            color: 'var(--yg-ink-soft)',
+            background: 'transparent',
+            fontSize: 15,
+          }}
+        >
+          {isDark ? '☀' : '月'}
+        </button>
         <button
           type="button"
           onClick={handleLogout}
