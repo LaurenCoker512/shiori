@@ -11,7 +11,8 @@ export default async function LibraryPage() {
 
   const uid = user.id;
 
-  const comprehensionResult = await query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string }>(
+  const [comprehensionResult, processingResult] = await Promise.all([
+  query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string }>(
     `WITH token_stats AS (
        SELECT
          t.id AS text_id, t.title, t.last_read_at,
@@ -31,7 +32,12 @@ export default async function LibraryPage() {
      SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
      FROM token_stats ORDER BY last_read_at DESC NULLS LAST`,
     [uid],
-  );
+  ),
+  query<{ id: number; title: string }>(
+    `SELECT id, title FROM texts WHERE user_id = $1 AND import_status IN ('pending', 'processing') ORDER BY id DESC`,
+    [uid],
+  ),
+  ]);
 
   const comprehension = comprehensionResult.rows.map(r => ({
     text_id: r.text_id,
@@ -40,6 +46,7 @@ export default async function LibraryPage() {
     pct_known: Number(r.pct_known),
   }));
 
+  const processingTexts = processingResult.rows;
   const mostRecentText = comprehension[0] ?? null;
 
   return (
@@ -123,10 +130,10 @@ export default async function LibraryPage() {
         <div className="mb-3.5">
           <h2 className="font-jp text-[20px] font-medium tracking-tight mb-1" style={{ color: 'var(--yg-ink)' }}>本棚</h2>
           <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
-            Your library · {comprehension.length} {comprehension.length === 1 ? 'text' : 'texts'}
+            Your library · {comprehension.length + processingTexts.length} {comprehension.length + processingTexts.length === 1 ? 'text' : 'texts'}
           </p>
         </div>
-        <ComprehensionList comprehension={comprehension} />
+        <ComprehensionList comprehension={comprehension} processingTexts={processingTexts} />
       </section>
     </main>
   );
