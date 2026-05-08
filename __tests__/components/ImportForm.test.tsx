@@ -49,7 +49,7 @@ describe('ImportForm', () => {
     await user.upload(screen.getByLabelText(/file/i), makeFile('a'.repeat(30001)));
     await waitFor(() => {
       expect(
-        screen.getByText(/This text is long and may take a moment to process/i),
+        screen.getByText(/This is a long text/i),
       ).toBeInTheDocument();
     });
   });
@@ -64,7 +64,7 @@ describe('ImportForm', () => {
     await user.upload(screen.getByLabelText(/file/i), makeFile('a'.repeat(30001)));
     await waitFor(() => {
       expect(
-        screen.getByText(/This text is long and may take a moment to process/i),
+        screen.getByText(/This is a long text/i),
       ).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /^import$/i })).toBeEnabled();
