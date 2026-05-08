@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { getSession } from '@/lib/session';
 import { analyzeGrammar, describeGrammarPattern } from '@/lib/claude';
 import type { GrammarPattern, Sentence } from '@/lib/types';
 
@@ -13,6 +14,9 @@ export async function GET(
   _request: Request,
   { params }: { params: { textId: string; sentenceIndex: string } },
 ): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
   const textId = parseInt(params.textId, 10);
   const sentenceIndex = parseInt(params.sentenceIndex, 10);
 
@@ -42,8 +46,8 @@ export async function GET(
   }
 
   const textResult = await query<{ parsed_content: Sentence[] }>(
-    'SELECT parsed_content FROM texts WHERE id = $1 AND user_id = 1',
-    [textId],
+    'SELECT parsed_content FROM texts WHERE id = $1 AND user_id = $2',
+    [textId, user.id],
   );
 
   if (textResult.rows.length === 0) {
@@ -73,8 +77,8 @@ export async function GET(
 
     for (const hint of grammarHints) {
       const existingResult = await query<GrammarPattern>(
-        'SELECT * FROM grammar_patterns WHERE user_id = 1 AND pattern = $1',
-        [hint.pattern],
+        'SELECT * FROM grammar_patterns WHERE user_id = $1 AND pattern = $2',
+        [user.id, hint.pattern],
       );
 
       let grammarPattern: GrammarPattern;
@@ -85,9 +89,9 @@ export async function GET(
         const description = await describeGrammarPattern(hint.pattern);
         const insertResult = await query<GrammarPattern>(
           `INSERT INTO grammar_patterns (user_id, pattern, description_en, jlpt_level)
-           VALUES (1, $1, $2, $3)
+           VALUES ($1, $2, $3, $4)
            RETURNING *`,
-          [hint.pattern, description, hint.jlpt_level ?? null],
+          [user.id, hint.pattern, description, hint.jlpt_level ?? null],
         );
         grammarPattern = insertResult.rows[0];
       }

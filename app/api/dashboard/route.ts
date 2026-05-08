@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { getSession } from '@/lib/session';
 import type { GrammarPattern } from '@/lib/types';
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -8,21 +9,28 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(_request: Request): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const uid = user.id;
+
   const [seenResult, knownResult, comprehensionResult, grammarResult] = await Promise.all([
     query<{ date: string; count: string }>(
       `SELECT DATE(seen_at) AS date, COUNT(*) AS count
        FROM words
-       WHERE user_id = 1 AND seen_at IS NOT NULL
+       WHERE user_id = $1 AND seen_at IS NOT NULL
        GROUP BY DATE(seen_at)
        ORDER BY date ASC`,
+      [uid],
     ),
     query<{ date: string; count: string }>(
       `SELECT DATE(known_at) AS date, COUNT(*) AS count
        FROM words
-       WHERE user_id = 1 AND known_at IS NOT NULL
+       WHERE user_id = $1 AND known_at IS NOT NULL
        GROUP BY DATE(known_at)
        ORDER BY date ASC`,
+      [uid],
     ),
     query<{ text_id: number; title: string; last_read_at: string; pct_known: string }>(
       `WITH token_stats AS (
@@ -38,22 +46,24 @@ export async function GET(): Promise<Response> {
         LEFT JOIN words w
           ON w.dictionary_form = token->>'dictionary_form'
           AND w.reading = token->>'reading'
-          AND w.user_id = 1
-        WHERE t.user_id = 1
+          AND w.user_id = $1
+        WHERE t.user_id = $1
           AND (token->>'is_content_word')::boolean = true
         GROUP BY t.id, t.title, t.last_read_at
       )
       SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
       FROM token_stats
       ORDER BY last_read_at DESC NULLS LAST`,
+      [uid],
     ),
     query<GrammarPattern & { sentence_count: string }>(
       `SELECT gp.*, COUNT(sp.id) AS sentence_count
        FROM grammar_patterns gp
        LEFT JOIN sentence_patterns sp ON sp.grammar_pattern_id = gp.id
-       WHERE gp.user_id = 1
+       WHERE gp.user_id = $1
        GROUP BY gp.id
        ORDER BY gp.first_encountered_at ASC`,
+      [uid],
     ),
   ]);
 

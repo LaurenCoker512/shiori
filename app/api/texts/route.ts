@@ -1,6 +1,7 @@
 import { parseHeadingSentinels } from '@/lib/text-processing';
 import { tokenizeText } from '@/lib/claude';
 import { query } from '@/lib/db';
+import { getSession } from '@/lib/session';
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -10,6 +11,9 @@ function jsonResponse(data: unknown, status = 200): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
   const body = await request.json() as {
     title?: string;
     content?: string;
@@ -31,8 +35,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const textResult = await query<{ id: number }>(
-    `INSERT INTO texts (title, raw_content, parsed_content) VALUES ($1, $2, $3) RETURNING id`,
-    [body.title.trim(), body.content ?? '', JSON.stringify(parsedContent)],
+    `INSERT INTO texts (user_id, title, raw_content, parsed_content) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [user.id, body.title.trim(), body.content ?? '', JSON.stringify(parsedContent)],
   );
   const textId = textResult.rows[0].id;
 
@@ -41,9 +45,9 @@ export async function POST(request: Request): Promise<Response> {
   for (const token of contentWords) {
     await query(
       `INSERT INTO words (user_id, dictionary_form, reading)
-       VALUES (1, $1, $2)
+       VALUES ($1, $2, $3)
        ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-      [token.dictionary_form, token.reading],
+      [user.id, token.dictionary_form, token.reading],
     );
   }
 
