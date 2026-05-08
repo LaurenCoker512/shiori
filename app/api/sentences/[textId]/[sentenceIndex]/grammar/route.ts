@@ -1,6 +1,6 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { analyzeGrammar, describeGrammarPattern } from '@/lib/claude';
+import { analyzeGrammar, describeGrammarPattern, buildLLMConfig } from '@/lib/claude';
 import type { GrammarPattern, Sentence } from '@/lib/types';
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -16,6 +16,10 @@ export async function GET(
 ): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+  const llmConfig = buildLLMConfig(user);
+  if (llmConfig === null) {
+    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
+  }
 
   const textId = parseInt(params.textId, 10);
   const sentenceIndex = parseInt(params.sentenceIndex, 10);
@@ -63,7 +67,7 @@ export async function GET(
   }
 
   try {
-    const grammarHints = await analyzeGrammar(sentence.raw);
+    const grammarHints = await analyzeGrammar(llmConfig, sentence.raw);
 
     if (grammarHints.length === 0) {
       await query(
@@ -86,7 +90,7 @@ export async function GET(
       if (existingResult.rows.length > 0) {
         grammarPattern = existingResult.rows[0];
       } else {
-        const description = await describeGrammarPattern(hint.pattern);
+        const description = await describeGrammarPattern(llmConfig, hint.pattern);
         const insertResult = await query<GrammarPattern>(
           `INSERT INTO grammar_patterns (user_id, pattern, description_en, jlpt_level)
            VALUES ($1, $2, $3, $4)

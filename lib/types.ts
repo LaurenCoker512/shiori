@@ -5,6 +5,7 @@ export interface Token {
   surface: string;
   dictionary_form: string;
   reading: string;
+  dict_reading: string;
   is_content_word: boolean;
 }
 

@@ -8,6 +8,11 @@ export interface SessionUser {
   id: number;
   name: string;
   email: string;
+  anthropic_api_key: string | null;
+  ai_provider: 'anthropic' | 'openrouter';
+  anthropic_model: string;
+  openrouter_api_key: string | null;
+  openrouter_model: string;
 }
 
 export async function getSession(): Promise<SessionUser | null> {
@@ -15,7 +20,8 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!sessionId) return null;
 
   const result = await query<SessionUser>(
-    `SELECT u.id, u.name, u.email
+    `SELECT u.id, u.name, u.email, u.anthropic_api_key,
+            u.ai_provider, u.anthropic_model, u.openrouter_api_key, u.openrouter_model
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > NOW()`,

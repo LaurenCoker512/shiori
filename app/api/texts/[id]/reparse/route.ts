@@ -1,5 +1,5 @@
 import { parseHeadingSentinels } from '@/lib/text-processing';
-import { tokenizeText } from '@/lib/claude';
+import { tokenizeText, buildLLMConfig } from '@/lib/claude';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 
@@ -16,6 +16,11 @@ export async function POST(
 ): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const llmConfig = buildLLMConfig(user);
+  if (llmConfig === null) {
+    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
+  }
 
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
@@ -34,7 +39,7 @@ export async function POST(
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n');
 
-  const tokenized = await tokenizeText(cleanedText);
+  const tokenized = await tokenizeText(llmConfig, cleanedText);
   const parsedContent = parseHeadingSentinels(tokenized);
 
   await query(
@@ -62,7 +67,7 @@ export async function POST(
       `INSERT INTO words (user_id, dictionary_form, reading)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-      [user.id, token.dictionary_form, token.reading],
+      [user.id, token.dictionary_form, token.dict_reading],
     );
   }
 

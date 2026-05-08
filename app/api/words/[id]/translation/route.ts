@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
-import { translateWord } from '@/lib/claude';
+import { getSession } from '@/lib/session';
+import { translateWord, buildLLMConfig } from '@/lib/claude';
 import { parseTranslations } from '@/lib/types';
 import type { Word } from '@/lib/types';
 
@@ -14,12 +15,19 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } },
 ): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+  const llmConfig = buildLLMConfig(user);
+  if (llmConfig === null) {
+    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
+  }
+
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
 
   const wordResult = await query<Word>(
-    'SELECT * FROM words WHERE id = $1 AND user_id = 1',
-    [id],
+    'SELECT * FROM words WHERE id = $1 AND user_id = $2',
+    [id, user.id],
   );
 
   if (wordResult.rows.length === 0) {
@@ -39,12 +47,12 @@ export async function GET(
   const contextSentence = searchParams.get('contextSentence') ?? '';
 
   try {
-    const result = await translateWord(word.dictionary_form, contextSentence);
+    const result = await translateWord(llmConfig, word.dictionary_form, contextSentence);
     const translationJson = JSON.stringify(result.translations);
 
     await query(
-      'UPDATE words SET translation = $1, jlpt_level = $2 WHERE id = $3 AND user_id = 1',
-      [translationJson, result.jlpt_level, id],
+      'UPDATE words SET translation = $1, jlpt_level = $2 WHERE id = $3 AND user_id = $4',
+      [translationJson, result.jlpt_level, id, user.id],
     );
 
     return jsonResponse({

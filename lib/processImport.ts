@@ -1,4 +1,5 @@
 import { tokenizeText } from '@/lib/claude';
+import type { LLMConfig } from '@/lib/claude';
 import { parseHeadingSentinels } from '@/lib/text-processing';
 import { query } from '@/lib/db';
 
@@ -6,6 +7,7 @@ export async function processImport(
   textId: number,
   userId: number,
   rawContent: string,
+  config: LLMConfig,
 ): Promise<void> {
   try {
     await query(
@@ -20,7 +22,7 @@ export async function processImport(
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\n');
 
-    const tokenized = await tokenizeText(normalizedContent);
+    const tokenized = await tokenizeText(config, normalizedContent);
     const parsedContent = parseHeadingSentinels(tokenized);
 
     await query(
@@ -31,7 +33,7 @@ export async function processImport(
     const contentWords = parsedContent.flatMap(s => s.tokens).filter(t => t.is_content_word);
     if (contentWords.length > 0) {
       const forms = contentWords.map(t => t.dictionary_form);
-      const readings = contentWords.map(t => t.reading);
+      const readings = contentWords.map(t => t.dict_reading);
       await query(
         `INSERT INTO words (user_id, dictionary_form, reading)
          SELECT $1, unnest($2::text[]), unnest($3::text[])

@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { buildLLMConfig } from '@/lib/claude';
 import { processImport } from '@/lib/processImport';
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -12,6 +13,11 @@ function jsonResponse(data: unknown, status = 200): Response {
 export async function POST(request: Request): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const llmConfig = buildLLMConfig(user);
+  if (llmConfig === null) {
+    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
+  }
 
   const body = await request.json() as {
     title?: string;
@@ -32,7 +38,7 @@ export async function POST(request: Request): Promise<Response> {
   const textId = textResult.rows[0].id;
 
   // Fire-and-forget — tokenization continues after this response returns
-  void processImport(textId, user.id, content);
+  void processImport(textId, user.id, content, llmConfig);
 
   return jsonResponse({ id: textId }, 202);
 }

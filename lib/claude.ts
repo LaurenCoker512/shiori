@@ -1,10 +1,55 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ParsedContent, JlptLevel } from './types';
+import type { SessionUser } from './session';
 
-const client = new Anthropic();
-const MODEL = 'claude-sonnet-4-6';
+export interface LLMConfig {
+  apiKey: string;
+  model: string;
+  baseURL?: string;
+}
 
-const TOKENIZE_CHUNK_SIZE = 800;
+export function buildLLMConfig(user: SessionUser): LLMConfig | null {
+  if (user.ai_provider === 'openrouter') {
+    if (user.openrouter_api_key === null) return null;
+    return {
+      apiKey: user.openrouter_api_key,
+      model: user.openrouter_model,
+      baseURL: 'https://openrouter.ai/api/v1',
+    };
+  }
+  if (user.anthropic_api_key === null) return null;
+  return { apiKey: user.anthropic_api_key, model: user.anthropic_model };
+}
+
+async function callModel(config: LLMConfig, prompt: string, maxTokens: number): Promise<string> {
+  if (config.baseURL !== undefined) {
+    const res = await fetch(`${config.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
+    const data = await res.json() as { choices: Array<{ message: { content: string } }> };
+    return data.choices[0]?.message?.content ?? '';
+  }
+
+  const client = new Anthropic({ apiKey: config.apiKey });
+  const message = await client.messages.create({
+    model: config.model,
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  return message.content[0].type === 'text' ? message.content[0].text : '';
+}
+
+const TOKENIZE_CHUNK_SIZE = 600;
 
 function splitIntoChunks(text: string): string[] {
   if (text.length <= TOKENIZE_CHUNK_SIZE) return [text];
@@ -41,23 +86,20 @@ function splitIntoChunks(text: string): string[] {
 }
 
 // Compact response: array of sentences, each sentence is an array of token tuples.
-// Token tuple: [surface, dictionary_form, reading, is_content_word (0|1)]
-type CompactToken = [string, string, string, 0 | 1];
+// Token tuple: [surface, dictionary_form, surface_reading, dict_reading, is_content_word (0|1)]
+type CompactToken = [string, string, string, string, 0 | 1];
 type CompactResponse = CompactToken[][];
 
-async function tokenizeChunk(chunk: string): Promise<ParsedContent> {
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
-    messages: [{
-      role: 'user',
-      content: `You are a Japanese NLP tokenizer. Tokenize the following Japanese text into sentences and tokens.
+async function tokenizeChunk(config: LLMConfig, chunk: string): Promise<ParsedContent> {
+  const raw = await callModel(config, `You are a Japanese NLP tokenizer. Tokenize the following Japanese text into sentences and tokens.
 
 Return ONLY a valid JSON array of sentences with no prose, markdown, or code fences.
-Each sentence is an array of token tuples: [surface, dictionary_form, hiragana_reading, is_content_word]
-is_content_word is 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace.
+Each sentence is an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
+- surface_reading: hiragana reading of the surface form as it appears in the text
+- dict_reading: hiragana reading of the dictionary_form (the base/plain form)
+- is_content_word is 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace
 
-Example: [["私","私","わたし",1],["は","は","は",0],["学生","学生","がくせい",1],["です","だ","です",0],["。","。","。",0]]
+Example: [["食べていた","食べる","たべていた","たべる",1],["は","は","は","は",0],["学生","学生","がくせい","がくせい",1]]
 
 Full output shape: [[token,token,...],[token,token,...],...]
 
@@ -67,12 +109,9 @@ Rules:
 - dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
 
 Text to tokenize:
-${chunk}`,
-    }],
-  });
+${chunk}`, 8192);
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '';
-  console.log(`[tokenize] chunk=${chunk.length}, stop=${message.stop_reason}, response=\n${raw}\n---`);
+  console.log(`[tokenize] chunk=${chunk.length}, model=${config.model}, response=\n${raw}\n---`);
   const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   const compact = JSON.parse(json) as CompactResponse;
 
@@ -83,18 +122,19 @@ ${chunk}`,
       surface: t[0],
       dictionary_form: t[1],
       reading: t[2],
-      is_content_word: t[3] === 1,
+      dict_reading: t[3],
+      is_content_word: t[4] === 1,
     })),
   }));
 }
 
-export async function tokenizeText(cleanedText: string): Promise<ParsedContent> {
+export async function tokenizeText(config: LLMConfig, cleanedText: string): Promise<ParsedContent> {
   const chunks = splitIntoChunks(cleanedText);
   const results: ParsedContent = [];
   let sentenceOffset = 0;
 
   for (const chunk of chunks) {
-    const chunkResult = await tokenizeChunk(chunk);
+    const chunkResult = await tokenizeChunk(config, chunk);
     results.push(...chunkResult.map(s => ({ ...s, sentence_index: s.sentence_index + sentenceOffset })));
     sentenceOffset += chunkResult.length;
   }
@@ -107,13 +147,8 @@ interface GrammarHint {
   jlpt_level: JlptLevel | null;
 }
 
-export async function analyzeGrammar(sentence: string): Promise<GrammarHint[]> {
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 512,
-    messages: [{
-      role: 'user',
-      content: `You are a Japanese grammar analyzer for immersion learners.
+export async function analyzeGrammar(config: LLMConfig, sentence: string): Promise<GrammarHint[]> {
+  const raw = await callModel(config, `You are a Japanese grammar analyzer for immersion learners.
 
 Analyze the following sentence and identify grammar patterns worth explaining — conjugations, grammatical constructions, and set phrases. Skip trivially common structures (e.g. plain dictionary-form verbs, basic copula です/だ).
 
@@ -126,26 +161,15 @@ Return ONLY a valid JSON array with no prose, markdown, or code fences. Return a
   }
 ]
 
-Sentence: ${sentence}`,
-    }],
-  });
+Sentence: ${sentence}`, 512);
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
   const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   return JSON.parse(json) as GrammarHint[];
 }
 
-export async function describeGrammarPattern(pattern: string): Promise<string> {
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 256,
-    messages: [{
-      role: 'user',
-      content: `Provide a concise English explanation (1–2 sentences) of the Japanese grammar pattern "${pattern}" for an intermediate learner. Return only the explanation text, no JSON, no formatting.`,
-    }],
-  });
-
-  return message.content[0].type === 'text' ? message.content[0].text.trim() : '';
+export async function describeGrammarPattern(config: LLMConfig, pattern: string): Promise<string> {
+  const raw = await callModel(config, `Provide a concise English explanation (1–2 sentences) of the Japanese grammar pattern "${pattern}" for an intermediate learner. Return only the explanation text, no JSON, no formatting.`, 256);
+  return raw.trim();
 }
 
 interface TranslationResult {
@@ -154,15 +178,11 @@ interface TranslationResult {
 }
 
 export async function translateWord(
+  config: LLMConfig,
   dictionaryForm: string,
   contextSentence: string,
 ): Promise<TranslationResult> {
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 256,
-    messages: [{
-      role: 'user',
-      content: `You are a Japanese–English dictionary. Given a Japanese word and a sentence it appears in, return all common English glosses for the word and a JLPT level estimate.
+  const raw = await callModel(config, `You are a Japanese–English dictionary. Given a Japanese word and a sentence it appears in, return all common English glosses for the word and a JLPT level estimate.
 
 Rules:
 - Return all common meanings (1–5 words each). For polysemous words, include all common senses — prefer over-inclusion to omission.
@@ -177,11 +197,8 @@ Return ONLY valid JSON with no prose, markdown, or code fences:
 }
 
 Word: ${dictionaryForm}
-Sentence: ${contextSentence}`,
-    }],
-  });
+Sentence: ${contextSentence}`, 256);
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
   const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   return JSON.parse(json) as TranslationResult;
 }
