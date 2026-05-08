@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#cf8b97"/>
+  <text
+    x="16"
+    y="24"
+    text-anchor="middle"
+    font-family="'Zen Old Mincho', 'Hiragino Mincho ProN', serif"
+    font-size="20"
+    font-weight="500"
+    fill="#faf3df"
+  >栞</text>
+</svg>
