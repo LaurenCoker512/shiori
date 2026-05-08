@@ -5,7 +5,7 @@ import type { Word, WordStatus, JlptLevel } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 const STATUS_FILTERS: { value: '' | WordStatus; label: string }[] = [
   { value: '',        label: 'All'    },
