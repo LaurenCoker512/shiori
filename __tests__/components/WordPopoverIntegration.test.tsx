@@ -95,7 +95,7 @@ describe('WordToken + WordPopover integration', () => {
       '/api/words/7',
       expect.objectContaining({ method: 'PATCH' }),
     );
-    expect(ruby).toHaveClass('decoration-blue-400');
+    expect(ruby).toHaveAttribute('data-status', 'seen');
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/words/7/translation');
@@ -112,7 +112,7 @@ describe('WordToken + WordPopover integration', () => {
     await user.click(ruby);
 
     await waitFor(() => {
-      expect(ruby).toHaveClass('decoration-gray-300');
+      expect(ruby).toHaveAttribute('data-status', 'unseen');
     });
   });
 });

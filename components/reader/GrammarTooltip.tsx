@@ -41,11 +41,24 @@ export function GrammarTooltip({
   }, [textId, sentenceIndex]);
 
   return (
-    <span className="block mt-2 p-3 bg-gray-50 border rounded text-sm" aria-label="Grammar analysis">
-      <span className="flex justify-between items-start mb-1">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Grammar</span>
+    <span
+      className="block mt-2 rounded-[10px] p-4 font-en text-sm"
+      style={{
+        background: 'var(--yg-paper)',
+        border: '1px solid var(--yg-rule)',
+      }}
+      aria-label="Grammar analysis"
+    >
+      <span className="flex justify-between items-start mb-2">
+        <span
+          className="font-en text-[10px] font-semibold uppercase tracking-[1.4px]"
+          style={{ color: 'var(--yg-ink-muted)' }}
+        >
+          Grammar
+        </span>
         <button
-          className="text-gray-400 hover:text-gray-600 text-xs leading-none ml-2"
+          className="font-en text-[11px] ml-2"
+          style={{ color: 'var(--yg-ink-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
           aria-label="Hide grammar analysis"
           onClick={e => { e.stopPropagation(); onClose(); }}
         >
@@ -54,21 +67,30 @@ export function GrammarTooltip({
       </span>
       <span aria-live="polite" aria-atomic="true">
         {loading && <Spinner />}
-        {!loading && error && <span>Grammar analysis unavailable</span>}
+        {!loading && error && <span style={{ color: 'var(--yg-ink-soft)' }}>Grammar analysis unavailable</span>}
         {!loading && !error && patterns !== null && patterns.length === 0 && (
-          <span className="text-gray-500">No grammar patterns found</span>
+          <span style={{ color: 'var(--yg-ink-muted)' }}>No grammar patterns found</span>
         )}
         {!loading && !error && patterns !== null && patterns.length > 0 && (
-          <ul>
+          <ul className="space-y-2">
             {patterns.map(pattern => (
-              <li key={pattern.id} className="mb-2">
-                <strong>{pattern.pattern}</strong>
-                {pattern.jlpt_level !== null && (
-                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1 rounded">
-                    {pattern.jlpt_level}
-                  </span>
-                )}
-                <p className="text-gray-700 mt-1">{pattern.description_en}</p>
+              <li key={pattern.id}>
+                <div className="flex items-center gap-2">
+                  <strong className="font-jp text-[15px]" style={{ color: 'var(--yg-ink)' }}>
+                    {pattern.pattern}
+                  </strong>
+                  {pattern.jlpt_level !== null && (
+                    <span
+                      className="font-en text-[10px] font-semibold tracking-[1px]"
+                      style={{ color: 'var(--yg-coral)' }}
+                    >
+                      {pattern.jlpt_level}
+                    </span>
+                  )}
+                </div>
+                <p className="font-en text-[13px] mt-0.5 leading-relaxed" style={{ color: 'var(--yg-ink-soft)' }}>
+                  {pattern.description_en}
+                </p>
               </li>
             ))}
           </ul>

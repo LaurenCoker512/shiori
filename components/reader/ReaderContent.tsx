@@ -71,16 +71,47 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      {/* Toolbar */}
+      <div className="flex justify-end mb-5">
         <button
           type="button"
           onClick={toggleFurigana}
-          className="min-h-11 px-2 inline-flex items-center text-sm text-blue-600 underline"
+          className="font-en text-[12px] font-medium min-h-11 px-4 rounded-full border inline-flex items-center transition-all"
+          style={{
+            background: 'var(--yg-paper-hi)',
+            borderColor: 'var(--yg-rule)',
+            color: 'var(--yg-ink-soft)',
+          }}
         >
           {showFurigana ? 'Hide furigana' : 'Show furigana'}
         </button>
       </div>
-      <div className="leading-loose">
+
+      {/* Legend */}
+      <div className="flex gap-4 mb-5 font-en text-[11px]" style={{ color: 'var(--yg-ink-soft)' }}>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--yg-known)' }} aria-hidden="true" />
+          Known
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--yg-seen)' }} aria-hidden="true" />
+          Seen
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="w-3 h-3 rounded-sm"
+            style={{ border: '1.5px dotted var(--yg-coral)' }}
+            aria-hidden="true"
+          />
+          New
+        </span>
+      </div>
+
+      {/* Text body */}
+      <div
+        className="font-jp leading-[2.6] text-[18px] tracking-[0.02em]"
+        style={{ color: 'var(--yg-ink)' }}
+      >
         {content.map((sentence, i) => (
           <SentenceBlock
             key={i}
@@ -94,6 +125,14 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           />
         ))}
       </div>
+
+      {/* End ornament */}
+      <div className="flex items-center justify-center gap-3.5 mt-10 mb-3">
+        <span className="flex-1 h-px max-w-[80px]" style={{ background: 'var(--yg-rule)' }} />
+        <span className="font-jp text-sm tracking-[6px]" style={{ color: 'var(--yg-coral)' }}>· · ·</span>
+        <span className="flex-1 h-px max-w-[80px]" style={{ background: 'var(--yg-rule)' }} />
+      </div>
+
       {popoverWord !== null && popoverAnchor !== null && (
         <WordPopover
           word={popoverWord}

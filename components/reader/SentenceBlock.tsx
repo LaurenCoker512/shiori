@@ -5,13 +5,13 @@ import type { Sentence, Word, GrammarPattern } from '@/lib/types';
 import { WordToken } from './WordToken';
 import { GrammarTooltip } from './GrammarTooltip';
 
-const HEADING_CLASSES: Record<string, string> = {
-  h1: 'text-3xl font-bold my-4',
-  h2: 'text-2xl font-bold my-3',
-  h3: 'text-xl font-bold my-2',
-  h4: 'text-lg font-semibold my-2',
-  h5: 'text-base font-semibold my-1',
-  h6: 'text-sm font-semibold my-1',
+const HEADING_STYLES: Record<string, React.CSSProperties> = {
+  h1: { fontSize: '2rem',  fontWeight: 500, margin: '1.2em 0 0.6em', letterSpacing: '-0.3px' },
+  h2: { fontSize: '1.6rem', fontWeight: 500, margin: '1.1em 0 0.5em' },
+  h3: { fontSize: '1.3rem', fontWeight: 500, margin: '1em 0 0.4em' },
+  h4: { fontSize: '1.1rem', fontWeight: 500, margin: '0.9em 0 0.3em' },
+  h5: { fontSize: '1rem',   fontWeight: 600, margin: '0.8em 0 0.2em' },
+  h6: { fontSize: '0.9rem', fontWeight: 600, margin: '0.7em 0 0.2em' },
 };
 
 interface SentenceBlockProps {
@@ -51,9 +51,13 @@ export function SentenceBlock({
   ));
 
   if (sentence.is_heading === true) {
-    const tag = `h${sentence.heading_level ?? 1}` as keyof typeof HEADING_CLASSES;
+    const tag = `h${sentence.heading_level ?? 1}`;
     const Tag = tag as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-    return <Tag className={HEADING_CLASSES[tag]}>{tokens}</Tag>;
+    return (
+      <Tag style={{ ...HEADING_STYLES[tag], color: 'var(--yg-ink)', fontFamily: 'var(--font-zen-mincho)' }}>
+        {tokens}
+      </Tag>
+    );
   }
 
   function handleSentenceClick(e: React.MouseEvent) {
@@ -74,22 +78,25 @@ export function SentenceBlock({
 
   return (
     <p
-      className="my-2 leading-loose cursor-default"
+      className="my-[0.7em] cursor-default"
+      style={{ textIndent: '1em' }}
       data-grammar-trigger
       onClick={handleSentenceClick}
     >
       {tokens}
       {grammarState === 'prompt' && (
-        <span className="block mt-1 text-sm text-gray-600">
+        <span className="block mt-1.5 font-en text-xs" style={{ color: 'var(--yg-ink-soft)' }}>
           {cachedPatterns !== null ? 'Show grammar analysis?' : 'Analyze grammar for this sentence?'}
           <button
-            className="ml-2 text-blue-600 hover:underline"
+            className="ml-2 font-en text-xs"
+            style={{ color: 'var(--yg-bamboo-dark)', background: 'none', border: 'none', cursor: 'pointer' }}
             onClick={handleConfirm}
           >
             {cachedPatterns !== null ? 'Show' : 'Analyze'}
           </button>
           <button
-            className="ml-2 text-gray-400 hover:underline"
+            className="ml-2 font-en text-xs"
+            style={{ color: 'var(--yg-ink-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
             onClick={handleCancel}
           >
             Cancel

@@ -22,8 +22,8 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
   }
 
   const reading = furiganaOverride ?? token.reading;
-  const statusClass = word !== null ? statusToUnderlineClass(word.status) : '';
-  const showRt = showFurigana;
+  const status = word?.status;
+  const showEditTrigger = isHovered && !isEditing && word !== null && onFuriganaEdit !== undefined;
 
   function handleClick(e: React.MouseEvent<HTMLElement>) {
     if (word !== null && onWordClick !== undefined) {
@@ -31,25 +31,56 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
     }
   }
 
-  const showEditTrigger = isHovered && !isEditing && word !== null && onFuriganaEdit !== undefined;
+  const tintStyle: React.CSSProperties = status === 'seen'
+    ? { background: 'var(--yg-seen)', borderBottom: '1px solid transparent' }
+    : status === 'known'
+      ? { background: 'var(--yg-known)', borderBottom: '1px solid transparent' }
+      : { borderBottom: '1.5px dotted var(--yg-coral)' };
 
   return (
     <span
-      className="relative inline-block"
+      className="relative inline"
       data-word
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
     >
-      <ruby aria-label={reading} className={statusClass} onClick={handleClick}>
+      <ruby
+        aria-label={reading}
+        data-status={status ?? 'unseen'}
+        style={{
+          ...tintStyle,
+          display: 'inline',
+          padding: '0 2px',
+          margin: '0 -2px',
+          borderRadius: 4,
+          cursor: word !== null ? 'pointer' : 'default',
+          transition: 'background 0.15s',
+        }}
+        onClick={handleClick}
+      >
         {token.surface}
-        <rt aria-hidden="true" className={showRt ? '' : 'hidden'}>{reading}</rt>
+        <rt
+          aria-hidden="true"
+          className={showFurigana ? '' : 'hidden'}
+          style={{
+            fontSize: '0.42em',
+            fontFamily: 'var(--font-zen-mincho), serif',
+            fontWeight: 400,
+            letterSpacing: '0.4px',
+            color: 'var(--yg-ink-muted)',
+            userSelect: 'none',
+          }}
+        >
+          {reading}
+        </rt>
       </ruby>
       {showEditTrigger && (
         <button
           type="button"
           aria-label={`Edit furigana for ${token.surface}`}
           data-furigana-edit-trigger
-          className="absolute -top-5 right-0 text-xs text-gray-400 hover:text-gray-700 leading-none"
+          className="absolute -top-5 right-0 text-xs leading-none"
+          style={{ color: 'var(--yg-ink-muted)' }}
           onClick={() => setIsEditing(true)}
         >
           ✎
@@ -70,12 +101,4 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
       )}
     </span>
   );
-}
-
-function statusToUnderlineClass(status: string): string {
-  switch (status) {
-    case 'seen': return 'underline decoration-blue-400';
-    case 'known': return 'underline decoration-green-400';
-    default: return 'underline decoration-gray-300';
-  }
 }

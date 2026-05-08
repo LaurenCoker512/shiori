@@ -31,7 +31,7 @@ describe('WordPopover', () => {
     vi.restoreAllMocks();
   });
 
-  it('unseen word: shows translation, no "Mark as known" button', () => {
+  it('shows translation text', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'unseen', translation: '["cat"]' })}
@@ -41,10 +41,9 @@ describe('WordPopover', () => {
       />,
     );
     expect(screen.getByText('cat')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mark as known/i })).not.toBeInTheDocument();
   });
 
-  it('seen word: shows "Mark as known" button and "Close" button', () => {
+  it('shows three status buttons: New, Seen, Known', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
@@ -53,11 +52,12 @@ describe('WordPopover', () => {
         onStatusUpdate={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /mark as known/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /seen/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /known/i })).toBeInTheDocument();
   });
 
-  it('known word: shows translation, no "Mark as known" button', () => {
+  it('known word: shows translation, status buttons present', () => {
     render(
       <WordPopover
         word={makeWord({ status: 'known', translation: '["cat"]' })}
@@ -67,7 +67,7 @@ describe('WordPopover', () => {
       />,
     );
     expect(screen.getByText('cat')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /mark as known/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /known/i })).toBeInTheDocument();
   });
 
   it('user_translation set → shown primary with pencil icon aria-label="Custom translation"', () => {
@@ -108,10 +108,9 @@ describe('WordPopover', () => {
     expect(container.querySelector('[aria-live="polite"]')).toBeInTheDocument();
   });
 
-  it('"Mark as known" → calls PATCH /api/words/[id], calls onStatusUpdate', async () => {
+  it('clicking Known button → calls PATCH /api/words/[id] with status known, calls onStatusUpdate', async () => {
     const user = userEvent.setup();
     const onStatusUpdate = vi.fn();
-    const onClose = vi.fn();
     const updatedWord = makeWord({ status: 'known', known_at: '2024-01-01' });
 
     vi.spyOn(global, 'fetch').mockResolvedValue(
@@ -122,12 +121,12 @@ describe('WordPopover', () => {
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
-        onClose={onClose}
+        onClose={vi.fn()}
         onStatusUpdate={onStatusUpdate}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /mark as known/i }));
+    await user.click(screen.getByRole('button', { name: /known/i }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
