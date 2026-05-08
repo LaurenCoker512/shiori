@@ -10,6 +10,9 @@ const PAGE_SIZE = 50;
 interface WordBrowserProps {
   initialWords?: Word[];
   initialTotal?: number;
+  initialKnownCount?: number;
+  initialSeenCount?: number;
+  initialUnseenCount?: number;
 }
 
 const STATUS_FILTERS: { value: '' | WordStatus; label: string }[] = [
@@ -31,9 +34,12 @@ function statusBg(status: WordStatus): string {
   return 'transparent';
 }
 
-export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowserProps) {
+export function WordBrowser({ initialWords = [], initialTotal = 0, initialKnownCount = 0, initialSeenCount = 0, initialUnseenCount = 0 }: WordBrowserProps) {
   const [words, setWords] = useState<Word[]>(initialWords);
   const [total, setTotal] = useState(initialTotal);
+  const [knownCount, setKnownCount] = useState(initialKnownCount);
+  const [seenCount, setSeenCount] = useState(initialSeenCount);
+  const [unseenCount, setUnseenCount] = useState(initialUnseenCount);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'' | WordStatus>('');
@@ -53,9 +59,12 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
     if (st) params.set('status', st);
     if (jp) params.set('jlpt_level', jp);
     const res = await fetch(`/api/words?${params.toString()}`);
-    const data = await res.json() as { words: Word[]; total: number };
+    const data = await res.json() as { words: Word[]; total: number; knownCount: number; seenCount: number; unseenCount: number };
     setWords(data.words);
     setTotal(data.total);
+    setKnownCount(data.knownCount);
+    setSeenCount(data.seenCount);
+    setUnseenCount(data.unseenCount);
     setLoading(false);
   }, []);
 
@@ -87,20 +96,14 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
     setEditingId(null);
   }
 
-  const counts = {
-    known: words.filter(w => w.status === 'known').length,
-    seen:  words.filter(w => w.status === 'seen').length,
-    unseen: words.filter(w => w.status === 'unseen').length,
-  };
-
   return (
     <div>
       {/* Stat cards */}
       <div className="grid grid-cols-4 gap-3 mb-7">
-        <StatCard label="Total" value={total} sub="words seen" />
-        <StatCard label="Known" value={counts.known} sub="recognized" tintColor="var(--yg-bamboo)" bg="var(--yg-known)" />
-        <StatCard label="Seen" value={counts.seen} sub="learning" tintColor="var(--yg-coral)" bg="var(--yg-seen)" />
-        <StatCard label="New" value={counts.unseen} sub="to discover" />
+        <StatCard label="Total" value={total} sub="in library" />
+        <StatCard label="Known" value={knownCount} sub="recognized" tintColor="var(--yg-bamboo)" bg="var(--yg-known)" />
+        <StatCard label="Seen" value={seenCount} sub="learning" tintColor="var(--yg-coral)" bg="var(--yg-seen)" />
+        <StatCard label="New" value={unseenCount} sub="to discover" />
       </div>
 
       {/* Search + filter row */}
@@ -133,7 +136,7 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
               style={{
                 background: status === f.value ? '#fff' : 'transparent',
                 boxShadow: status === f.value ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                color: status === f.value ? 'var(--yg-ink)' : 'var(--yg-ink-soft)',
+                color: status === f.value ? '#2c2a28' : 'var(--yg-ink-soft)',
                 border: 'none',
                 cursor: 'pointer',
               }}
@@ -177,7 +180,7 @@ export function WordBrowser({ initialWords = [], initialTotal = 0 }: WordBrowser
                 style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}
               >
                 {/* Word + reading */}
-                <div className="shrink-0 w-20 text-center">
+                <div className="shrink-0 w-[130px] text-center">
                   <div
                     className="font-jp text-[22px] font-medium leading-[1.2] rounded-[6px] px-0.5 py-0.5"
                     style={{ color: 'var(--yg-ink)', background: bg }}

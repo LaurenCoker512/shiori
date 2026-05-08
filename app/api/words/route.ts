@@ -21,28 +21,44 @@ export async function GET(request: Request): Promise<Response> {
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '50', 10));
   const offset = (page - 1) * pageSize;
 
-  const wordsResult = await query<Word>(
-    `SELECT * FROM words
-     WHERE user_id = $1
-       AND ($2::text IS NULL OR status = $2)
-       AND ($3::text IS NULL OR jlpt_level = $3)
-       AND ($4::text IS NULL OR dictionary_form ILIKE '%' || $4 || '%' OR reading ILIKE '%' || $4 || '%')
-     ORDER BY reading ASC
-     LIMIT $5 OFFSET $6`,
-    [user.id, status, jlptLevel, search, pageSize, offset],
-  );
+  const [wordsResult, countResult, statusCountsResult] = await Promise.all([
+    query<Word>(
+      `SELECT * FROM words
+       WHERE user_id = $1
+         AND ($2::text IS NULL OR status = $2)
+         AND ($3::text IS NULL OR jlpt_level = $3)
+         AND ($4::text IS NULL OR dictionary_form ILIKE '%' || $4 || '%' OR reading ILIKE '%' || $4 || '%')
+       ORDER BY CASE status WHEN 'known' THEN 0 WHEN 'seen' THEN 1 ELSE 2 END, reading ASC
+       LIMIT $5 OFFSET $6`,
+      [user.id, status, jlptLevel, search, pageSize, offset],
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM words
+       WHERE user_id = $1
+         AND ($2::text IS NULL OR status = $2)
+         AND ($3::text IS NULL OR jlpt_level = $3)
+         AND ($4::text IS NULL OR dictionary_form ILIKE '%' || $4 || '%' OR reading ILIKE '%' || $4 || '%')`,
+      [user.id, status, jlptLevel, search],
+    ),
+    query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*) AS count FROM words
+       WHERE user_id = $1
+         AND ($2::text IS NULL OR jlpt_level = $2)
+         AND ($3::text IS NULL OR dictionary_form ILIKE '%' || $3 || '%' OR reading ILIKE '%' || $3 || '%')
+       GROUP BY status`,
+      [user.id, jlptLevel, search],
+    ),
+  ]);
 
-  const countResult = await query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM words
-     WHERE user_id = $1
-       AND ($2::text IS NULL OR status = $2)
-       AND ($3::text IS NULL OR jlpt_level = $3)
-       AND ($4::text IS NULL OR dictionary_form ILIKE '%' || $4 || '%' OR reading ILIKE '%' || $4 || '%')`,
-    [user.id, status, jlptLevel, search],
-  );
+  const statusCounts = Object.fromEntries(
+    statusCountsResult.rows.map(r => [r.status, Number(r.count)]),
+  ) as Partial<Record<string, number>>;
 
   return jsonResponse({
     words: wordsResult.rows,
     total: parseInt(countResult.rows[0].count, 10),
+    knownCount: statusCounts['known'] ?? 0,
+    seenCount: statusCounts['seen'] ?? 0,
+    unseenCount: statusCounts['unseen'] ?? 0,
   });
 }

@@ -11,7 +11,7 @@ export default async function VocabularyPage() {
 
   const uid = user.id;
 
-  const [seenResult, knownResult, wordsResult, wordsCountResult] = await Promise.all([
+  const [seenResult, knownResult, wordsResult, wordsCountResult, statusCountsResult] = await Promise.all([
     query<{ date: string; count: string }>(
       `SELECT DATE(seen_at) AS date, COUNT(*) AS count
        FROM words WHERE user_id = $1 AND seen_at IS NOT NULL
@@ -25,11 +25,17 @@ export default async function VocabularyPage() {
       [uid],
     ),
     query<Word>(
-      `SELECT * FROM words WHERE user_id = $1 ORDER BY reading ASC LIMIT 50`,
+      `SELECT * FROM words WHERE user_id = $1
+       ORDER BY CASE status WHEN 'known' THEN 0 WHEN 'seen' THEN 1 ELSE 2 END, reading ASC
+       LIMIT 50`,
       [uid],
     ),
     query<{ total: string }>(
       `SELECT COUNT(*) AS total FROM words WHERE user_id = $1`,
+      [uid],
+    ),
+    query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*) AS count FROM words WHERE user_id = $1 GROUP BY status`,
       [uid],
     ),
   ]);
@@ -38,6 +44,12 @@ export default async function VocabularyPage() {
   const knownSeries = knownResult.rows.map(r => ({ date: r.date, count: Number(r.count) }));
   const initialWords = wordsResult.rows;
   const initialTotal = Number(wordsCountResult.rows[0]?.total ?? 0);
+  const statusCounts = Object.fromEntries(
+    statusCountsResult.rows.map(r => [r.status, Number(r.count)]),
+  ) as Partial<Record<string, number>>;
+  const initialKnownCount = statusCounts['known'] ?? 0;
+  const initialSeenCount = statusCounts['seen'] ?? 0;
+  const initialUnseenCount = statusCounts['unseen'] ?? 0;
 
   return (
     <main className="px-14 py-9 max-w-[1200px] mx-auto">
@@ -65,7 +77,13 @@ export default async function VocabularyPage() {
         <VocabularyChart seenSeries={seenSeries} knownSeries={knownSeries} />
       </div>
 
-      <WordBrowser initialWords={initialWords} initialTotal={initialTotal} />
+      <WordBrowser
+        initialWords={initialWords}
+        initialTotal={initialTotal}
+        initialKnownCount={initialKnownCount}
+        initialSeenCount={initialSeenCount}
+        initialUnseenCount={initialUnseenCount}
+      />
     </main>
   );
 }
