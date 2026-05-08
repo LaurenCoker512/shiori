@@ -48,14 +48,14 @@ describe('WordBrowser', () => {
     vi.useRealTimers();
   });
 
-  it('status dropdown change triggers refetch with updated status param', async () => {
+  it('status filter button click triggers refetch with updated status param', async () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ words: [], total: 0 }), { status: 200 }),
     );
 
     render(<WordBrowser />);
-    await user.selectOptions(screen.getByLabelText('Filter by status'), 'seen');
+    await user.click(screen.getByRole('button', { name: /^seen$/i }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('status=seen'));

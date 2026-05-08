@@ -11,24 +11,74 @@ interface ComprehensionListProps {
   comprehension: ComprehensionEntry[];
 }
 
+const MOODS = ['persimmon', 'moss', 'twilight', 'gold'];
+
+const MOOD_GRADIENTS: Record<string, string> = {
+  persimmon: 'linear-gradient(135deg, var(--yg-coral), var(--yg-coral-dark))',
+  moss:      'linear-gradient(135deg, var(--yg-bamboo), var(--yg-bamboo-dark))',
+  twilight:  'linear-gradient(135deg, var(--yg-indigo), var(--yg-indigo-dark))',
+  gold:      'linear-gradient(135deg, #b89968, #7a614a)',
+};
+
 export function ComprehensionList({ comprehension }: ComprehensionListProps) {
   if (comprehension.length === 0) {
-    return <p className="text-gray-500 text-sm">No texts imported yet.</p>;
+    return (
+      <p className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>
+        No texts imported yet.
+      </p>
+    );
   }
 
   return (
-    <ul className="divide-y divide-gray-200">
-      {comprehension.map(entry => (
-        <li key={entry.text_id} className="py-3 flex justify-between items-center gap-4">
+    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+      {comprehension.map((entry, idx) => {
+        const gradient = MOOD_GRADIENTS[MOODS[idx % MOODS.length]];
+        const lastRead = entry.last_read_at !== null
+          ? new Date(entry.last_read_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+          : 'Not started';
+
+        return (
           <Link
+            key={entry.text_id}
             href={`/texts/${entry.text_id}`}
-            className="text-blue-600 hover:underline font-medium truncate"
+            className="block"
+            style={{ textDecoration: 'none' }}
           >
-            {entry.title}
+            <div
+              className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4"
+              style={{ background: gradient, color: '#faf3df', boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
+            >
+              {/* Sheen */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%)' }}
+                aria-hidden="true"
+              />
+              {/* Title */}
+              <div className="relative flex-1 min-w-0">
+                <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate">
+                  {entry.title}
+                </div>
+                <div className="font-en text-[11px] opacity-70 mt-0.5">{lastRead}</div>
+              </div>
+              {/* Progress */}
+              <div className="relative shrink-0 text-right">
+                <div className="font-en text-[22px] font-semibold leading-none">{entry.pct_known}%</div>
+                <div className="font-en text-[10px] opacity-70 mt-0.5">known</div>
+                <div
+                  className="h-1 rounded-sm mt-2"
+                  style={{ width: 64, background: 'rgba(250,243,223,0.25)' }}
+                >
+                  <div
+                    className="h-full rounded-sm"
+                    style={{ width: `${entry.pct_known}%`, background: '#faf3df' }}
+                  />
+                </div>
+              </div>
+            </div>
           </Link>
-          <span className="text-sm text-gray-600 shrink-0">{entry.pct_known}% known</span>
-        </li>
-      ))}
-    </ul>
+        );
+      })}
+    </div>
   );
 }
