@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SessionUser } from '@/lib/session';
+import { useUserName } from '@/components/ui/UserNameContext';
 
 function BookmarkRibbon({ size = 22 }: { size?: number }) {
   return (
@@ -36,11 +37,32 @@ const NAV_ITEMS = [
 export function SiteNav({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { userName, setUserName } = useUserName();
   const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(user.name);
+  const [editValue, setEditValue] = useState(userName);
   const [isDark, setIsDark] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const firstLetter = nameValue.charAt(0).toUpperCase();
+  const firstLetter = userName.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -60,9 +82,9 @@ export function SiteNav({ user }: { user: SessionUser }) {
   }
 
   async function saveName() {
-    const trimmed = nameValue.trim();
-    if (trimmed === '' || trimmed === user.name) {
-      setNameValue(user.name);
+    const trimmed = editValue.trim();
+    if (trimmed === '' || trimmed === userName) {
+      setEditValue(userName);
       setEditingName(false);
       return;
     }
@@ -72,9 +94,9 @@ export function SiteNav({ user }: { user: SessionUser }) {
       body: JSON.stringify({ name: trimmed }),
     });
     if (res.ok) {
-      router.refresh();
+      setUserName(trimmed);
     } else {
-      setNameValue(user.name);
+      setEditValue(userName);
     }
     setEditingName(false);
   }
@@ -152,12 +174,12 @@ export function SiteNav({ user }: { user: SessionUser }) {
           <input
             ref={nameInputRef}
             type="text"
-            value={nameValue}
-            onChange={e => setNameValue(e.target.value)}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
             onBlur={() => { void saveName(); }}
             onKeyDown={e => {
               if (e.key === 'Enter') { void saveName(); }
-              if (e.key === 'Escape') { setNameValue(user.name); setEditingName(false); }
+              if (e.key === 'Escape') { setEditValue(userName); setEditingName(false); }
             }}
             aria-label="Edit your name"
             className="font-en text-[13px] rounded px-1.5 py-0.5 border outline-none w-28"
@@ -167,12 +189,12 @@ export function SiteNav({ user }: { user: SessionUser }) {
         ) : (
           <button
             type="button"
-            onClick={() => { setEditingName(true); }}
+            onClick={() => { setEditValue(userName); setEditingName(true); }}
             className="font-en text-[13px] rounded px-1 py-0.5 transition-colors"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--yg-ink-soft)' }}
             title="Click to edit name"
           >
-            {nameValue}
+            {userName}
           </button>
         )}
         <button
@@ -187,29 +209,60 @@ export function SiteNav({ user }: { user: SessionUser }) {
             fontSize: 15,
           }}
         >
-          {isDark ? '☀' : '月'}
+          {isDark ? '日' : '月'}
         </button>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="font-en text-[12px] font-medium px-3 py-1.5 rounded-full border transition-colors"
-          style={{
-            borderColor: 'var(--yg-rule)',
-            color: 'var(--yg-ink-soft)',
-            background: 'transparent',
-          }}
-        >
-          Sign out
-        </button>
-        <div
-          className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-en text-[14px] font-semibold shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, var(--yg-coral), var(--yg-coral-dark))',
-            color: '#faf3df',
-          }}
-          aria-hidden="true"
-        >
-          {firstLetter}
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(prev => !prev)}
+            aria-label="Open user menu"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-en text-[14px] font-semibold transition-opacity hover:opacity-80"
+            style={{
+              background: 'linear-gradient(135deg, var(--yg-coral), var(--yg-coral-dark))',
+              color: '#faf3df',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {firstLetter}
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              aria-label="User menu"
+              className="absolute right-0 top-full mt-2 w-40 rounded-xl border py-1 z-30"
+              style={{
+                background: 'var(--yg-paper-hi)',
+                borderColor: 'var(--yg-rule)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              }}
+            >
+              <Link
+                href="/settings"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="block font-en text-[13px] px-4 py-2.5 transition-colors"
+                style={{ color: 'var(--yg-ink-soft)', textDecoration: 'none' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(42,36,28,0.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'none'; }}
+              >
+                Settings
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); void handleLogout(); }}
+                className="w-full text-left font-en text-[13px] px-4 py-2.5 transition-colors"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--yg-ink-soft)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,36,28,0.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
