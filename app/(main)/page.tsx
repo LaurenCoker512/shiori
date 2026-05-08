@@ -1,0 +1,142 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { query } from '@/lib/db';
+import { getSession } from '@/lib/session';
+import { ComprehensionList } from '@/components/dashboard/ComprehensionList';
+import { TimeGreeting } from '@/components/ui/TimeGreeting';
+
+export default async function LibraryPage() {
+  const user = await getSession();
+  if (user === null) redirect('/login');
+
+  const uid = user.id;
+
+  const comprehensionResult = await query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string }>(
+    `WITH token_stats AS (
+       SELECT
+         t.id AS text_id, t.title, t.last_read_at,
+         COUNT(*) FILTER (WHERE w.status = 'known') AS known_count,
+         COUNT(*) AS total_count
+       FROM texts t
+       CROSS JOIN LATERAL jsonb_array_elements(t.parsed_content) AS sentence
+       CROSS JOIN LATERAL jsonb_array_elements(sentence->'tokens') AS token
+       LEFT JOIN words w
+         ON w.dictionary_form = token->>'dictionary_form'
+         AND w.reading = token->>'reading'
+         AND w.user_id = $1
+       WHERE t.user_id = $1
+         AND (token->>'is_content_word')::boolean = true
+       GROUP BY t.id, t.title, t.last_read_at
+     )
+     SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
+     FROM token_stats ORDER BY last_read_at DESC NULLS LAST`,
+    [uid],
+  );
+
+  const comprehension = comprehensionResult.rows.map(r => ({
+    text_id: r.text_id,
+    title: r.title,
+    last_read_at: r.last_read_at,
+    pct_known: Number(r.pct_known),
+  }));
+
+  const mostRecentText = comprehension[0] ?? null;
+
+  return (
+    <main className="px-14 py-9 max-w-[1200px] mx-auto">
+      {/* Page header */}
+      <div className="flex items-baseline justify-between mb-7">
+        <div>
+          <h1 className="font-jp text-[36px] font-medium tracking-tight mb-1.5" style={{ color: 'var(--yg-ink)' }}>
+            ようこそ、{user.name}さん。
+          </h1>
+          <p className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>
+            <TimeGreeting />
+          </p>
+        </div>
+        <Link
+          href="/import"
+          className="font-en text-[13px] font-medium inline-flex items-center gap-2 px-[18px] py-2.5 rounded-full"
+          style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)' }}
+        >
+          <span className="text-base leading-none -mt-0.5">+</span>
+          Import a text
+        </Link>
+      </div>
+
+      {/* Continue reading hero */}
+      <div className="mb-9">
+        {mostRecentText !== null ? (
+          <div
+            className="rounded-2xl p-7 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, var(--yg-coral) 0%, var(--yg-coral-dark) 100%)',
+              color: '#faf3df',
+              boxShadow: '0 6px 24px rgba(157, 90, 106, 0.22)',
+            }}
+          >
+            <div
+              className="absolute right-[-30px] bottom-[-50px] font-jp text-[240px] leading-none select-none pointer-events-none"
+              style={{ color: 'rgba(255,255,255,0.07)', fontWeight: 400 }}
+              aria-hidden="true"
+            >
+              雨
+            </div>
+            <div className="relative">
+              <div className="font-en text-[11px] opacity-75 tracking-[2px] uppercase mb-2.5">
+                Continue reading
+              </div>
+              <h2 className="font-jp text-[34px] font-medium mb-1 tracking-tight leading-[1.1]">
+                {mostRecentText.title}
+              </h2>
+              <div className="flex gap-7 mb-5 mt-2">
+                <Stat n={`${mostRecentText.pct_known}%`} l="words recognized" />
+              </div>
+              <Link
+                href={`/texts/${mostRecentText.text_id}`}
+                className="font-en text-[13px] font-semibold inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full"
+                style={{ background: '#faf3df', color: 'var(--yg-coral-dark)' }}
+              >
+                Resume <span>→</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="rounded-2xl p-7 flex flex-col items-center justify-center gap-4 border"
+            style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}
+          >
+            <p className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>No texts imported yet.</p>
+            <Link
+              href="/import"
+              className="font-en text-[13px] font-medium px-5 py-2 rounded-full"
+              style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)' }}
+            >
+              Import your first text
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Library */}
+      <section>
+        <div className="mb-3.5">
+          <h2 className="font-jp text-[20px] font-medium tracking-tight mb-1" style={{ color: 'var(--yg-ink)' }}>本棚</h2>
+          <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
+            Your library · {comprehension.length} {comprehension.length === 1 ? 'text' : 'texts'}
+          </p>
+        </div>
+        <ComprehensionList comprehension={comprehension} />
+      </section>
+    </main>
+  );
+}
+
+function Stat({ n, l }: { n: string; l: string }) {
+  return (
+    <div>
+      <div className="font-jp text-[28px] font-medium leading-none tracking-tight">{n}</div>
+      <div className="font-en text-[11px] opacity-80 mt-1">{l}</div>
+    </div>
+  );
+}
