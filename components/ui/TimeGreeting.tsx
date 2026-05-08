@@ -2,10 +2,10 @@
 
 const GREETINGS = [
   { until: 5,  text: 'A quiet night for reading.' },
-  { until: 11, text: 'Good morning. Begin the day with words.' },
-  { until: 14, text: 'Good afternoon. Make time for a page or two.' },
-  { until: 18, text: 'Good evening. Settle in with something good.' },
-  { until: 21, text: 'The evening is yours.' },
+  { until: 12, text: 'Good morning. Begin the day with words.' },
+  { until: 17, text: 'Good afternoon. Make time for a page or two.' },
+  { until: 21, text: 'Good evening. Settle in with something good.' },
+  { until: 24, text: 'The evening is yours.' },
   { until: 24, text: 'A quiet night for reading.' },
 ];
 
