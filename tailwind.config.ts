@@ -9,8 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        yg: {
+          bg:          'var(--yg-bg)',
+          paper:       'var(--yg-paper)',
+          'paper-hi':  'var(--yg-paper-hi)',
+          ink:         'var(--yg-ink)',
+          'ink-soft':  'var(--yg-ink-soft)',
+          'ink-muted': 'var(--yg-ink-muted)',
+          rule:        'var(--yg-rule)',
+          coral:       'var(--yg-coral)',
+          'coral-dark':'var(--yg-coral-dark)',
+          bamboo:      'var(--yg-bamboo)',
+          'bamboo-dark':'var(--yg-bamboo-dark)',
+          indigo:      'var(--yg-indigo)',
+          'indigo-dark':'var(--yg-indigo-dark)',
+          seen:        'var(--yg-seen)',
+          known:       'var(--yg-known)',
+        },
+      },
+      fontFamily: {
+        jp: ['var(--font-zen-mincho)', 'Yu Mincho', 'Hiragino Mincho ProN', 'serif'],
+        en: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
       },
     },
   },

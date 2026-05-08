@@ -3,25 +3,54 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --yg-bg:          #e6dfd0;
+  --yg-paper:       #f0eadb;
+  --yg-paper-hi:    #f8f3e6;
+  --yg-ink:         #2c2a28;
+  --yg-ink-soft:    #6c6358;
+  --yg-ink-muted:   #a89e8e;
+  --yg-rule:        rgba(44, 42, 40, 0.10);
+  --yg-rule-soft:   rgba(44, 42, 40, 0.05);
+  --yg-coral:       #cf8b97;
+  --yg-coral-dark:  #9d5a6a;
+  --yg-bamboo:      #8aa68a;
+  --yg-bamboo-dark: #5e7c61;
+  --yg-indigo:      #5b7591;
+  --yg-indigo-dark: #34465c;
+  --yg-seen:        rgba(207, 139, 151, 0.18);
+  --yg-known:       rgba(138, 166, 138, 0.20);
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--yg-bg);
+  color: var(--yg-ink);
+  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Radial gradient overlay for the whole app */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at top right, rgba(207,139,151,0.10), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(91,117,145,0.06), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Word status tints */
+.word-seen   { background: var(--yg-seen); }
+.word-known  { background: var(--yg-known); }
+.word-unseen { border-bottom: 1.5px dotted var(--yg-coral); }
+
+:root {
+  --font-zen-mincho: 'Zen Old Mincho';
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
+  .font-jp  { font-family: var(--font-zen-mincho), 'Yu Mincho', 'Hiragino Mincho ProN', serif; }
+  .font-en  { font-family: var(--font-dm-sans), system-ui, sans-serif; }
 }
