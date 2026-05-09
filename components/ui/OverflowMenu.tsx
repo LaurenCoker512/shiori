@@ -6,10 +6,11 @@ interface OverflowMenuProps {
   onRename: () => void;
   onDelete: () => void;
   onReparse?: () => void;
+  onTags?: () => void;
   variant?: 'default' | 'light';
 }
 
-export function OverflowMenu({ onRename, onDelete, onReparse, variant = 'default' }: OverflowMenuProps) {
+export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 'default' }: OverflowMenuProps) {
   const [open, setOpen] = useState(false);
 
   const isLight = variant === 'light';
@@ -42,6 +43,17 @@ export function OverflowMenu({ onRename, onDelete, onReparse, variant = 'default
             boxShadow: '0 8px 28px rgba(0,0,0,0.10)',
           }}
         >
+          {onTags !== undefined && (
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+              style={{ color: 'var(--yg-ink)' }}
+              onClick={() => { setOpen(false); onTags(); }}
+            >
+              Tags
+            </button>
+          )}
           {onReparse !== undefined && (
             <button
               type="button"

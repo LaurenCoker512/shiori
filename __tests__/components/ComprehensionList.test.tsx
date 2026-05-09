@@ -18,6 +18,7 @@ const sampleEntry = {
   title: '吾輩は猫である',
   last_read_at: '2026-03-15T10:00:00Z',
   pct_known: 72,
+  tags: [],
 };
 
 describe('ComprehensionList — empty state', () => {
@@ -108,7 +109,7 @@ describe('ComprehensionList — comprehension cards', () => {
       <ComprehensionList
         comprehension={[
           sampleEntry,
-          { text_id: 2, title: '坊っちゃん', last_read_at: null, pct_known: 45 },
+          { text_id: 2, title: '坊っちゃん', last_read_at: null, pct_known: 45, tags: [] },
         ]}
       />,
     );

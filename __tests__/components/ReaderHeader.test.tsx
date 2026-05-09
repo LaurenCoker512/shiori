@@ -27,7 +27,7 @@ describe('ReaderHeader', () => {
 
   it('clicking rename opens inline input pre-filled with current title', async () => {
     const user = userEvent.setup();
-    render(<ReaderHeader title="My Text" textId={1} />);
+    render(<ReaderHeader title="My Text" textId={1} initialTags={[]} />);
 
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /rename/i }));
@@ -43,7 +43,7 @@ describe('ReaderHeader', () => {
       new Response(JSON.stringify({ id: 1, title: 'New Title' }), { status: 200 }),
     );
 
-    render(<ReaderHeader title="Old Title" textId={5} />);
+    render(<ReaderHeader title="Old Title" textId={5} initialTags={[]} />);
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /rename/i }));
 
@@ -67,7 +67,7 @@ describe('ReaderHeader', () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch');
 
-    render(<ReaderHeader title="My Text" textId={1} />);
+    render(<ReaderHeader title="My Text" textId={1} initialTags={[]} />);
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /rename/i }));
 
@@ -81,7 +81,7 @@ describe('ReaderHeader', () => {
 
   it('clicking delete opens ConfirmDialog', async () => {
     const user = userEvent.setup();
-    render(<ReaderHeader title="My Text" textId={1} />);
+    render(<ReaderHeader title="My Text" textId={1} initialTags={[]} />);
 
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
@@ -95,7 +95,7 @@ describe('ReaderHeader', () => {
       new Response(null, { status: 204 }),
     );
 
-    render(<ReaderHeader title="My Text" textId={3} />);
+    render(<ReaderHeader title="My Text" textId={3} initialTags={[]} />);
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
     await user.click(screen.getByRole('button', { name: /^delete$/i }));
@@ -112,7 +112,7 @@ describe('ReaderHeader', () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch');
 
-    render(<ReaderHeader title="My Text" textId={1} />);
+    render(<ReaderHeader title="My Text" textId={1} initialTags={[]} />);
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
     await user.click(screen.getByRole('button', { name: /^cancel$/i }));

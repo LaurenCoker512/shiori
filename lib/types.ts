@@ -1,5 +1,12 @@
 export type WordStatus = 'unseen' | 'seen' | 'known';
 export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2' | 'N1';
+export type TagColor = 'coral' | 'bamboo' | 'indigo' | 'gold';
+
+export interface Tag {
+  id: number;
+  name: string;
+  color: TagColor;
+}
 
 export interface Token {
   surface: string;

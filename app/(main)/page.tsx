@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { ComprehensionList } from '@/components/dashboard/ComprehensionList';
 import { TimeGreeting } from '@/components/ui/TimeGreeting';
+import type { Tag } from '@/lib/types';
 
 export default async function LibraryPage() {
   const user = await getSession();
@@ -12,7 +13,7 @@ export default async function LibraryPage() {
   const uid = user.id;
 
   const [comprehensionResult, processingResult] = await Promise.all([
-  query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string }>(
+  query<{ text_id: number; title: string; last_read_at: string | null; pct_known: string; tags: Tag[] }>(
     `WITH token_stats AS (
        SELECT
          t.id AS text_id, t.title, t.last_read_at,
@@ -29,8 +30,19 @@ export default async function LibraryPage() {
          AND (token->>'is_content_word')::boolean = true
        GROUP BY t.id, t.title, t.last_read_at
      )
-     SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
-     FROM token_stats ORDER BY last_read_at DESC NULLS LAST`,
+     SELECT
+       ts.text_id, ts.title, ts.last_read_at,
+       ROUND(ts.known_count::numeric / NULLIF(ts.total_count, 0) * 100, 1) AS pct_known,
+       COALESCE(
+         json_agg(DISTINCT jsonb_build_object('id', tg.id, 'name', tg.name, 'color', tg.color))
+           FILTER (WHERE tg.id IS NOT NULL),
+         '[]'
+       ) AS tags
+     FROM token_stats ts
+     LEFT JOIN text_tags tt ON tt.text_id = ts.text_id
+     LEFT JOIN tags tg      ON tg.id = tt.tag_id
+     GROUP BY ts.text_id, ts.title, ts.last_read_at, ts.known_count, ts.total_count
+     ORDER BY ts.last_read_at DESC NULLS LAST`,
     [uid],
   ),
   query<{ id: number; title: string }>(
@@ -44,6 +56,7 @@ export default async function LibraryPage() {
     title: r.title,
     last_read_at: r.last_read_at,
     pct_known: Number(r.pct_known),
+    tags: r.tags ?? [],
   }));
 
   const processingTexts = processingResult.rows;

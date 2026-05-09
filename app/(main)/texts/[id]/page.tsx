@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import type { ParsedContent, Word, FuriganaOverride } from '@/lib/types';
+import type { ParsedContent, Word, FuriganaOverride, Tag } from '@/lib/types';
 import { ReaderHeader } from '@/components/reader/ReaderHeader';
 import { ReaderContent } from '@/components/reader/ReaderContent';
 
@@ -33,7 +33,13 @@ export default async function ReaderPage({ params }: { params: { id: string } })
 
   const text = textResult.rows[0];
 
-  const wordsResult = await query<Word>('SELECT * FROM words WHERE user_id = $1', [uid]);
+  const [wordsResult, tagsResult] = await Promise.all([
+    query<Word>('SELECT * FROM words WHERE user_id = $1', [uid]),
+    query<Tag>(
+      'SELECT tg.id, tg.name, tg.color FROM text_tags tt JOIN tags tg ON tg.id = tt.tag_id WHERE tt.text_id = $1 ORDER BY tg.name',
+      [id],
+    ),
+  ]);
   const wordStatusMap: Record<string, Word> = {};
   for (const word of wordsResult.rows) {
     wordStatusMap[`${word.dictionary_form}|${word.reading}`] = word;
@@ -46,7 +52,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
 
   return (
     <main className="max-w-[760px] mx-auto px-8 py-8">
-      <ReaderHeader title={text.title} textId={text.id} />
+      <ReaderHeader title={text.title} textId={text.id} initialTags={tagsResult.rows} />
       <ReaderContent
         content={text.parsed_content}
         wordStatusMap={wordStatusMap}

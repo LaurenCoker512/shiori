@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { TagPicker } from '@/components/ui/TagPicker';
+import type { Tag } from '@/lib/types';
+import { TAG_COLOR_SWATCHES } from '@/lib/tags';
 
 interface ComprehensionEntry {
   text_id: number;
   title: string;
   last_read_at: string | null;
   pct_known: number;
+  tags: Tag[];
 }
 
 interface ProcessingEntry {
@@ -27,7 +31,8 @@ type CardAction =
   | { type: 'idle' }
   | { type: 'renaming'; id: number; inputValue: string; error: string }
   | { type: 'deleting'; id: number; title: string }
-  | { type: 'reparsing'; id: number };
+  | { type: 'reparsing'; id: number }
+  | { type: 'tagging'; id: number; currentTags: Tag[] };
 
 const MOODS = ['persimmon', 'moss', 'twilight', 'gold'];
 
@@ -41,6 +46,12 @@ const MOOD_GRADIENTS: Record<string, string> = {
 export function ComprehensionList({ comprehension, processingTexts = [] }: ComprehensionListProps) {
   const router = useRouter();
   const [cardAction, setCardAction] = useState<CardAction>({ type: 'idle' });
+  // Local tag overrides: updated optimistically after TagPicker saves
+  const [localTags, setLocalTags] = useState<Map<number, Tag[]>>(new Map());
+
+  function tagsFor(entry: ComprehensionEntry): Tag[] {
+    return localTags.get(entry.text_id) ?? entry.tags ?? [];
+  }
 
   if (comprehension.length === 0 && processingTexts.length === 0) {
     return (
@@ -117,6 +128,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
             : 'Not started';
           const isRenaming = cardAction.type === 'renaming' && cardAction.id === entry.text_id;
           const isReparsing = cardAction.type === 'reparsing' && cardAction.id === entry.text_id;
+          const entryTags = tagsFor(entry);
 
           return (
             <div key={entry.text_id} className="relative">
@@ -185,7 +197,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                       style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%)' }}
                       aria-hidden="true"
                     />
-                    {/* Title */}
+                    {/* Title + tags */}
                     <div className="relative flex-1 min-w-0">
                       <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate">
                         {entry.title}
@@ -193,6 +205,24 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                       <div className="font-en text-[11px] opacity-70 mt-0.5">
                         {isReparsing ? 'Reparsing…' : lastRead}
                       </div>
+                      {entryTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {entryTags.map(tag => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-en text-[10px]"
+                              style={{ background: 'rgba(255,255,255,0.22)', color: '#faf3df' }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
+                                aria-hidden="true"
+                              />
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {/* Progress */}
                     <div className="relative shrink-0 text-right">
@@ -220,6 +250,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                   ) : (
                     <OverflowMenu
                       variant="light"
+                      onTags={() => setCardAction({ type: 'tagging', id: entry.text_id, currentTags: tagsFor(entry) })}
                       onRename={() => setCardAction({ type: 'renaming', id: entry.text_id, inputValue: entry.title, error: '' })}
                       onDelete={() => setCardAction({ type: 'deleting', id: entry.text_id, title: entry.title })}
                       onReparse={() => { void handleReparse(entry.text_id); }}
@@ -237,6 +268,18 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
           message={`Delete "${cardAction.title}"? This action cannot be undone.`}
           onConfirm={() => { void handleDelete(cardAction.id); }}
           onCancel={() => setCardAction({ type: 'idle' })}
+        />
+      )}
+
+      {cardAction.type === 'tagging' && (
+        <TagPicker
+          textId={cardAction.id}
+          currentTags={cardAction.currentTags}
+          onClose={() => setCardAction({ type: 'idle' })}
+          onSaved={savedTags => {
+            setLocalTags(prev => new Map(prev).set(cardAction.id, savedTags));
+            setCardAction({ type: 'idle' });
+          }}
         />
       )}
     </>

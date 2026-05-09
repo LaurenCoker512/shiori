@@ -5,18 +5,24 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { TagPicker } from '@/components/ui/TagPicker';
+import type { Tag } from '@/lib/types';
+import { TAG_COLOR_SWATCHES } from '@/lib/tags';
 
 interface ReaderHeaderProps {
   title: string;
   textId: number;
+  initialTags: Tag[];
 }
 
-export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps) {
+export function ReaderHeader({ title: initialTitle, textId, initialTags }: ReaderHeaderProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
+  const [tags, setTags] = useState<Tag[]>(initialTags);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReparsing, setIsReparsing] = useState(false);
+  const [isTagging, setIsTagging] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [renameError, setRenameError] = useState('');
 
@@ -71,7 +77,12 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
             Reparsing…
           </span>
         ) : (
-          <OverflowMenu onRename={startRename} onDelete={() => setIsDeleting(true)} onReparse={() => { void handleReparse(); }} />
+          <OverflowMenu
+            onTags={() => setIsTagging(true)}
+            onRename={startRename}
+            onDelete={() => setIsDeleting(true)}
+            onReparse={() => { void handleReparse(); }}
+          />
         )}
       </div>
 
@@ -135,9 +146,29 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
               </button>
             </form>
           ) : (
-            <h1 className="font-jp text-[26px] font-medium tracking-tight leading-tight" style={{ color: 'var(--yg-ink)' }}>
-              {title}
-            </h1>
+            <>
+              <h1 className="font-jp text-[26px] font-medium tracking-tight leading-tight" style={{ color: 'var(--yg-ink)' }}>
+                {title}
+              </h1>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {tags.map(tag => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-en text-[11px]"
+                      style={{ background: 'var(--yg-rule-soft)', color: 'var(--yg-ink-soft)' }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
+                        aria-hidden="true"
+                      />
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -147,6 +178,15 @@ export function ReaderHeader({ title: initialTitle, textId }: ReaderHeaderProps)
           message={`Delete "${title}"? This action cannot be undone.`}
           onConfirm={() => { void handleDelete(); }}
           onCancel={() => setIsDeleting(false)}
+        />
+      )}
+
+      {isTagging && (
+        <TagPicker
+          textId={textId}
+          currentTags={tags}
+          onClose={() => setIsTagging(false)}
+          onSaved={savedTags => { setTags(savedTags); setIsTagging(false); }}
         />
       )}
     </header>
