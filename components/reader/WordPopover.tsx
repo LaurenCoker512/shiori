@@ -8,8 +8,11 @@ import { Spinner } from '@/components/ui/Spinner';
 interface WordPopoverProps {
   word: Word;
   anchorRect: DOMRect;
+  surface?: string;
+  currentFurigana?: string;
   onClose: () => void;
   onStatusUpdate: (word: Word) => void;
+  onFuriganaEdit?: (surface: string, newReading: string) => void;
 }
 
 const STATUS_OPTS = [
@@ -18,12 +21,14 @@ const STATUS_OPTS = [
   { id: 'known'  as const, label: 'Known', jp: '既習' },
 ];
 
-export function WordPopover({ word, anchorRect, onClose, onStatusUpdate }: WordPopoverProps) {
+export function WordPopover({ word, anchorRect, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
   const [loadedTranslations, setLoadedTranslations] = useState<string[] | null>(null);
   const [translationLoading, setTranslationLoading] = useState(
     word.translation === null && word.user_translation === null,
   );
   const [markingStatus, setMarkingStatus] = useState(false);
+  const [furiganaInput, setFuriganaInput] = useState(currentFurigana ?? '');
+  const [savingFurigana, setSavingFurigana] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,6 +74,18 @@ export function WordPopover({ word, anchorRect, onClose, onStatusUpdate }: WordP
     } finally {
       setMarkingStatus(false);
     }
+  }
+
+  async function handleSaveFurigana() {
+    if (surface === undefined || onFuriganaEdit === undefined) return;
+    setSavingFurigana(true);
+    await fetch('/api/furigana-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word_id: word.id, surface_form: surface, corrected_reading: furiganaInput }),
+    });
+    setSavingFurigana(false);
+    onFuriganaEdit(surface, furiganaInput);
   }
 
   const translationText =
@@ -182,10 +199,10 @@ export function WordPopover({ word, anchorRect, onClose, onStatusUpdate }: WordP
             {STATUS_OPTS.map(opt => {
               const active = word.status === opt.id;
               const activeColor = opt.id === 'known'
-                ? 'var(--yg-bamboo)'
+                ? 'var(--yg-bamboo-dark)'
                 : opt.id === 'seen'
-                  ? 'var(--yg-coral)'
-                  : 'var(--yg-ink-soft)';
+                  ? 'var(--yg-coral-dark)'
+                  : 'var(--yg-ink)';
               return (
                 <button
                   key={opt.id}
@@ -208,6 +225,40 @@ export function WordPopover({ word, anchorRect, onClose, onStatusUpdate }: WordP
             })}
           </div>
         </div>
+
+        {/* Furigana edit */}
+        {surface !== undefined && (
+          <div>
+            <div className="font-en text-[11px] font-semibold tracking-[1.4px] uppercase mb-2" style={{ color: 'var(--yg-ink-muted)' }}>
+              Furigana
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-jp text-[15px] shrink-0" style={{ color: 'var(--yg-ink-soft)' }}>
+                {surface}
+              </span>
+              <input
+                aria-label={`Furigana reading for ${surface}`}
+                value={furiganaInput}
+                onChange={e => setFuriganaInput(e.target.value)}
+                className="flex-1 font-jp text-[14px] rounded-lg px-2.5 py-1.5 border outline-none min-w-0"
+                style={{
+                  background: 'var(--yg-paper)',
+                  borderColor: 'var(--yg-rule)',
+                  color: 'var(--yg-ink)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => { void handleSaveFurigana(); }}
+                disabled={savingFurigana}
+                className="font-en text-[12px] font-medium px-3 py-1.5 rounded-full shrink-0 disabled:opacity-40"
+                style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)', border: 'none', cursor: 'pointer' }}
+              >
+                {savingFurigana ? '…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

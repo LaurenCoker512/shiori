@@ -32,7 +32,7 @@ function WordTokenWithPopover({ initialWord }: { initialWord: Word }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
-  function handleWordClick(clicked: Word, rect: DOMRect) {
+  function handleWordClick(clicked: Word, _surface: string, _furigana: string, rect: DOMRect) {
     setAnchor(rect);
     if (clicked.status === 'unseen') {
       const advanced: Word = { ...clicked, status: 'seen' };

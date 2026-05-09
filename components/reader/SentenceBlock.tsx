@@ -5,13 +5,15 @@ import type { Sentence, Word, GrammarPattern } from '@/lib/types';
 import { WordToken } from './WordToken';
 import { GrammarTooltip } from './GrammarTooltip';
 
+const HEADING_FONT = "var(--reader-jp-font, var(--font-zen-mincho)), 'Yu Mincho', serif";
+
 const HEADING_STYLES: Record<string, React.CSSProperties> = {
-  h1: { fontSize: '2rem',  fontWeight: 500, margin: '1.2em 0 0.6em', letterSpacing: '-0.3px' },
-  h2: { fontSize: '1.6rem', fontWeight: 500, margin: '1.1em 0 0.5em' },
-  h3: { fontSize: '1.3rem', fontWeight: 500, margin: '1em 0 0.4em' },
-  h4: { fontSize: '1.1rem', fontWeight: 500, margin: '0.9em 0 0.3em' },
-  h5: { fontSize: '1rem',   fontWeight: 600, margin: '0.8em 0 0.2em' },
-  h6: { fontSize: '0.9rem', fontWeight: 600, margin: '0.7em 0 0.2em' },
+  h1: { fontSize: '2rem',  fontWeight: 500, margin: '1.2em 0 0.6em', letterSpacing: '-0.3px', fontFamily: HEADING_FONT },
+  h2: { fontSize: '1.6rem', fontWeight: 500, margin: '1.1em 0 0.5em', fontFamily: HEADING_FONT },
+  h3: { fontSize: '1.3rem', fontWeight: 500, margin: '1em 0 0.4em',   fontFamily: HEADING_FONT },
+  h4: { fontSize: '1.1rem', fontWeight: 500, margin: '0.9em 0 0.3em', fontFamily: HEADING_FONT },
+  h5: { fontSize: '1rem',   fontWeight: 600, margin: '0.8em 0 0.2em', fontFamily: HEADING_FONT },
+  h6: { fontSize: '0.9rem', fontWeight: 600, margin: '0.7em 0 0.2em', fontFamily: HEADING_FONT },
 };
 
 interface SentenceBlockProps {
@@ -19,8 +21,7 @@ interface SentenceBlockProps {
   wordStatusMap: Record<string, Word>;
   furiganaOverrides: Record<string, string>;
   showFurigana: boolean;
-  onWordClick?: (word: Word, anchor: DOMRect) => void;
-  onFuriganaEdit?: (surface: string, newReading: string) => void;
+  onWordClick?: (word: Word, surface: string, furigana: string, anchor: DOMRect) => void;
   textId: number;
 }
 
@@ -32,7 +33,6 @@ export function SentenceBlock({
   furiganaOverrides,
   showFurigana,
   onWordClick,
-  onFuriganaEdit,
   textId,
 }: SentenceBlockProps) {
   const [grammarState, setGrammarState] = useState<GrammarState>('idle');
@@ -42,11 +42,10 @@ export function SentenceBlock({
     <WordToken
       key={i}
       token={token}
-      word={wordStatusMap[`${token.dictionary_form}|${token.reading}`] ?? null}
+      word={wordStatusMap[`${token.dictionary_form}|${token.dict_reading}`] ?? null}
       furiganaOverride={furiganaOverrides[token.surface] ?? null}
       showFurigana={showFurigana}
       onWordClick={onWordClick}
-      onFuriganaEdit={onFuriganaEdit}
     />
   ));
 

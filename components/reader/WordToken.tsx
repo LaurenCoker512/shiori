@@ -1,33 +1,26 @@
 'use client';
 
-import { useState } from 'react';
 import type { Token, Word } from '@/lib/types';
-import { FuriganaEdit } from './FuriganaEdit';
 
 interface WordTokenProps {
   token: Token;
   word: Word | null;
   furiganaOverride: string | null;
   showFurigana: boolean;
-  onWordClick?: (word: Word, anchor: DOMRect) => void;
-  onFuriganaEdit?: (surface: string, newReading: string) => void;
+  onWordClick?: (word: Word, surface: string, furigana: string, anchor: DOMRect) => void;
 }
 
-export function WordToken({ token, word, furiganaOverride, showFurigana, onWordClick, onFuriganaEdit }: WordTokenProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-
+export function WordToken({ token, word, furiganaOverride, showFurigana, onWordClick }: WordTokenProps) {
   if (!token.is_content_word) {
     return <span>{token.surface}</span>;
   }
 
   const reading = furiganaOverride ?? token.reading;
   const status = word?.status;
-  const showEditTrigger = isHovered && !isEditing && word !== null && onFuriganaEdit !== undefined;
 
   function handleClick(e: React.MouseEvent<HTMLElement>) {
     if (word !== null && onWordClick !== undefined) {
-      onWordClick(word, e.currentTarget.getBoundingClientRect());
+      onWordClick(word, token.surface, reading, e.currentTarget.getBoundingClientRect());
     }
   }
 
@@ -41,15 +34,12 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
     <span
       className="relative inline"
       data-word
-      onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
     >
       <ruby
         aria-label={reading}
         data-status={status ?? 'unseen'}
         style={{
           ...tintStyle,
-          display: 'inline',
           padding: '0 2px',
           margin: '0 -2px',
           borderRadius: 4,
@@ -74,31 +64,6 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
           {reading}
         </rt>
       </ruby>
-      {showEditTrigger && (
-        <button
-          type="button"
-          aria-label={`Edit furigana for ${token.surface}`}
-          data-furigana-edit-trigger
-          className="absolute -top-5 right-0 text-xs leading-none"
-          style={{ color: 'var(--yg-ink-muted)' }}
-          onClick={() => setIsEditing(true)}
-        >
-          ✎
-        </button>
-      )}
-      {isEditing && word !== null && (
-        <FuriganaEdit
-          wordId={word.id}
-          surfaceForm={token.surface}
-          currentReading={reading}
-          onSave={(newReading) => {
-            setIsEditing(false);
-            setIsHovered(false);
-            if (onFuriganaEdit !== undefined) onFuriganaEdit(token.surface, newReading);
-          }}
-          onCancel={() => setIsEditing(false)}
-        />
-      )}
     </span>
   );
 }

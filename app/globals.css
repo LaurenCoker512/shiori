@@ -93,6 +93,7 @@ html.dark body::before {
 
 :root {
   --font-zen-mincho: 'Zen Old Mincho';
+  --font-noto-sans-jp: 'Noto Sans JP';
 }
 
 @keyframes shimmer {
