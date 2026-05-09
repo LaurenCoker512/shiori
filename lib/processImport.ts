@@ -2,6 +2,7 @@ import { tokenizeText } from '@/lib/claude';
 import type { LLMConfig } from '@/lib/claude';
 import { parseHeadingSentinels } from '@/lib/text-processing';
 import { query } from '@/lib/db';
+import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortControllers';
 
 export async function processImport(
   textId: number,
@@ -9,6 +10,9 @@ export async function processImport(
   rawContent: string,
   config: LLMConfig,
 ): Promise<void> {
+  const abortController = new AbortController();
+  registerImportAbort(textId, abortController);
+
   try {
     await query(
       'UPDATE texts SET import_status = $1 WHERE id = $2',
@@ -22,7 +26,7 @@ export async function processImport(
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\n');
 
-    const tokenized = await tokenizeText(config, normalizedContent);
+    const tokenized = await tokenizeText(config, normalizedContent, abortController.signal);
     const parsedContent = parseHeadingSentinels(tokenized);
 
     await query(
@@ -42,10 +46,15 @@ export async function processImport(
       );
     }
   } catch (err) {
+    unregisterImportAbort(textId);
+    // Aborted cancellations are intentional — don't write an error to the (now-deleted) row
+    if (err instanceof Error && err.name === 'AbortError') return;
     const message = err instanceof Error ? err.message : 'Unknown error';
     await query(
       'UPDATE texts SET import_status = $1, import_error = $2 WHERE id = $3',
       ['error', message, textId],
     ).catch(() => { /* best-effort — DB may be unavailable */ });
+    return;
   }
+  unregisterImportAbort(textId);
 }

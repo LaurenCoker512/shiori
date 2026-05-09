@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImportToast } from './ImportToast';
 import type { ImportJob } from './ImportToast';
+import { ConfirmDialog } from './ConfirmDialog';
 
 const STORAGE_KEY = 'shiori-import';
 const IMPORT_EVENT = 'shiori-import-created';
@@ -34,6 +35,7 @@ function readStoredImport(): ImportJob | null {
 export function ImportToastProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [job, setJob] = useState<ImportJob | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Read on mount (handles page refresh with a pending import in storage)
@@ -95,10 +97,39 @@ export function ImportToastProvider({ children }: { children: React.ReactNode })
     setJob(null);
   }
 
+  function handleCancelRequest() {
+    setShowCancelConfirm(true);
+  }
+
+  async function handleCancelConfirm() {
+    setShowCancelConfirm(false);
+    const textId = job?.id;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+    setJob(null);
+    if (textId !== undefined) {
+      await fetch(`/api/texts/${textId}`, { method: 'DELETE' });
+      router.refresh();
+    }
+  }
+
+  function handleCancelAbort() {
+    setShowCancelConfirm(false);
+  }
+
   return (
     <>
       {children}
-      {job !== null && <ImportToast job={job} onDismiss={handleDismiss} />}
+      {job !== null && (
+        <ImportToast job={job} onDismiss={handleDismiss} onCancel={handleCancelRequest} />
+      )}
+      {showCancelConfirm && (
+        <ConfirmDialog
+          message="Cancel this import? The text will be deleted and cannot be recovered."
+          confirmLabel="Cancel import"
+          onConfirm={() => { void handleCancelConfirm(); }}
+          onCancel={handleCancelAbort}
+        />
+      )}
     </>
   );
 }

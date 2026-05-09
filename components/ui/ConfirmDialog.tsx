@@ -2,11 +2,12 @@
 
 interface ConfirmDialogProps {
   message: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ message, confirmLabel = 'Delete', onConfirm, onCancel }: ConfirmDialogProps) {
   return (
     <div
       role="dialog"
@@ -52,7 +53,7 @@ export function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogPro
               border: 'none',
             }}
           >
-            Delete
+            {confirmLabel}
           </button>
         </div>
       </div>

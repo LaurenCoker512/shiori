@@ -11,9 +11,10 @@ export interface ImportJob {
 interface ImportToastProps {
   job: ImportJob;
   onDismiss: () => void;
+  onCancel: () => void;
 }
 
-export function ImportToast({ job, onDismiss }: ImportToastProps) {
+export function ImportToast({ job, onDismiss, onCancel }: ImportToastProps) {
   const accentColor =
     job.phase === 'ready' ? 'var(--yg-bamboo)' :
     job.phase === 'error' ? 'var(--yg-coral-dark)' :
@@ -43,16 +44,27 @@ export function ImportToast({ job, onDismiss }: ImportToastProps) {
 
       <div className="flex-1 px-4 py-3.5">
         {job.phase === 'pending' || job.phase === 'processing' ? (
-          <div className="flex items-center gap-3">
-            <Spinner />
-            <div>
-              <div className="font-en text-[12px] font-semibold" style={{ color: 'var(--yg-ink)' }}>
-                {job.title}
-              </div>
-              <div className="font-jp text-[11px]" style={{ color: 'var(--yg-ink-soft)' }}>
-                インポート中…
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Spinner />
+              <div>
+                <div className="font-en text-[12px] font-semibold" style={{ color: 'var(--yg-ink)' }}>
+                  {job.title}
+                </div>
+                <div className="font-jp text-[11px]" style={{ color: 'var(--yg-ink-soft)' }}>
+                  インポート中…
+                </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={onCancel}
+              aria-label="Cancel import"
+              className="font-en text-[11px] font-medium px-3 py-1.5 rounded-full shrink-0"
+              style={{ background: 'rgba(42,36,28,0.06)', border: 'none', color: 'var(--yg-ink-soft)', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
           </div>
         ) : job.phase === 'ready' ? (
           <div className="flex items-start justify-between gap-3">

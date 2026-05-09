@@ -2,6 +2,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import type { Word, FuriganaOverride } from '@/lib/types';
 import { jsonResponse } from '@/lib/api';
+import { abortImport } from '@/lib/importAbortControllers';
 
 export async function GET(
   _request: Request,
@@ -84,6 +85,7 @@ export async function DELETE(
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
 
+  abortImport(id);
   await query('DELETE FROM texts WHERE id = $1 AND user_id = $2', [id, user.id]);
 
   return jsonResponse({ ok: true });
