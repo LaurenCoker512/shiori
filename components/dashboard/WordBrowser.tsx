@@ -5,7 +5,7 @@ import type { Word, WordStatus, JlptLevel } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 21;
 
 const STATUS_FILTERS: { value: '' | WordStatus; label: string }[] = [
   { value: '',        label: 'All'    },
@@ -177,7 +177,7 @@ export function WordBrowser() {
       {loading ? (
         <div className="py-8 flex justify-center"><Spinner /></div>
       ) : (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
           {words.map(word => {
             const claudeGloss = parseTranslations(word.translation).join('; ');
             const dot = statusDotColor(word.status);
@@ -230,13 +230,13 @@ export function WordBrowser() {
                         <div className="flex-1 min-w-0">
                           {word.user_translation !== null ? (
                             <>
-                              <span className="block truncate">{word.user_translation}</span>
+                              <span className="block">{word.user_translation}</span>
                               {claudeGloss !== '' && (
-                                <span className="block text-xs text-gray-500 truncate">{claudeGloss}</span>
+                                <span className="block text-xs text-gray-500">{claudeGloss}</span>
                               )}
                             </>
                           ) : claudeGloss !== '' ? (
-                            <span className="block truncate" style={{ color: 'var(--yg-ink-soft)' }}>{claudeGloss}</span>
+                            <span className="block" style={{ color: 'var(--yg-ink-soft)' }}>{claudeGloss}</span>
                           ) : (
                             <button
                               type="button"

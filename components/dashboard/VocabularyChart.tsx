@@ -31,7 +31,11 @@ export function buildCumulativeData(seenSeries: SeriesPoint[], knownSeries: Seri
 }
 
 export function VocabularyChart({ seenSeries, knownSeries }: VocabularyChartProps) {
-  const data = buildCumulativeData(seenSeries, knownSeries);
+  const data = buildCumulativeData(seenSeries, knownSeries).map(point => {
+    const d = new Date(point.date);
+    const label = `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${String(d.getUTCFullYear()).slice(2)}`;
+    return { ...point, label };
+  });
 
   if (data.length === 0) {
     return (
@@ -44,7 +48,7 @@ export function VocabularyChart({ seenSeries, knownSeries }: VocabularyChartProp
   return (
     <div aria-label="Vocabulary progress chart">
       <ResponsiveContainer width="100%" height={120}>
-        <AreaChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="knownGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%"   stopColor="var(--yg-bamboo)" stopOpacity={0.25} />
@@ -52,12 +56,20 @@ export function VocabularyChart({ seenSeries, knownSeries }: VocabularyChartProp
             </linearGradient>
           </defs>
           <XAxis
-            dataKey="date"
+            dataKey="label"
             tick={{ fontSize: 9, fill: 'var(--yg-ink-muted)', fontFamily: 'var(--font-dm-sans)' }}
             axisLine={false}
             tickLine={false}
+            interval="preserveStartEnd"
           />
-          <YAxis hide />
+          <YAxis
+            tick={{ fontSize: 9, fill: 'var(--yg-ink-muted)', fontFamily: 'var(--font-dm-sans)' }}
+            axisLine={false}
+            tickLine={false}
+            width={32}
+            tickCount={4}
+            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : String(v)}
+          />
           <Tooltip
             contentStyle={{
               background: 'var(--yg-paper-hi)',
