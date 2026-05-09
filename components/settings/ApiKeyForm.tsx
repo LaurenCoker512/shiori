@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 
+const SUPPORTED_MODELS: { id: string; label: string }[] = [
+  { id: 'deepseek/deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+];
+
 interface ApiKeyFormProps {
   hasOpenRouterKey: boolean;
   openrouterModel: string;
@@ -41,7 +45,8 @@ export function ApiKeyForm({ hasOpenRouterKey, openrouterModel }: ApiKeyFormProp
   }
 
   const openrouterKeyValid = openrouterKey === '' || openrouterKey.trim().startsWith('sk-or-');
-  const canSubmit = status !== 'saving' && openrouterKeyValid && selectedModel.trim() !== '';
+  const modelIsValid = SUPPORTED_MODELS.some(m => m.id === selectedModel);
+  const canSubmit = status !== 'saving' && openrouterKeyValid && modelIsValid;
 
   const inputStyle: React.CSSProperties = {
     background: 'var(--yg-paper-hi)',
@@ -105,24 +110,29 @@ export function ApiKeyForm({ hasOpenRouterKey, openrouterModel }: ApiKeyFormProp
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="openrouter-model" className="font-en text-[12px] font-medium" style={{ color: 'var(--yg-ink-soft)' }}>
+          <span className="font-en text-[12px] font-medium" style={{ color: 'var(--yg-ink-soft)' }}>
             Model
-          </label>
-          <input
-            id="openrouter-model"
-            type="text"
-            value={selectedModel}
-            onChange={e => { setSelectedModel(e.target.value); setStatus('idle'); }}
-            placeholder="anthropic/claude-sonnet-4-6"
-            className="font-mono text-[13px] rounded-xl px-4 py-2.5 border outline-none"
-            style={inputStyle}
-            spellCheck={false}
-          />
-          <p className="font-en text-[11px]" style={{ color: 'var(--yg-ink-muted)' }}>
-            Any model ID from openrouter.ai/models, e.g.{' '}
-            <span className="font-mono">google/gemini-2.5-pro</span> or{' '}
-            <span className="font-mono">anthropic/claude-sonnet-4-6</span>.
-          </p>
+          </span>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Model selection">
+            {SUPPORTED_MODELS.map(model => {
+              const isSelected = selectedModel === model.id;
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => { setSelectedModel(model.id); setStatus('idle'); }}
+                  className="font-en text-[13px] font-medium px-4 py-2 rounded-full border transition-colors"
+                  style={isSelected
+                    ? { background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)', borderColor: 'var(--yg-ink)' }
+                    : { background: 'var(--yg-paper-hi)', color: 'var(--yg-ink-soft)', borderColor: 'var(--yg-rule)' }
+                  }
+                  aria-pressed={isSelected}
+                >
+                  {model.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
