@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
@@ -8,6 +8,67 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TagPicker } from '@/components/ui/TagPicker';
 import type { Tag } from '@/lib/types';
 import { TAG_COLOR_SWATCHES } from '@/lib/tags';
+
+function TagPills({ tags }: { tags: Tag[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  // null = measuring mode (all tags rendered); number = settled visible count
+  const [visibleCount, setVisibleCount] = useState<number | null>(null);
+  const prevTagsRef = useRef<Tag[]>(tags);
+
+  useLayoutEffect(() => {
+    const tagsChanged = prevTagsRef.current !== tags;
+    prevTagsRef.current = tags;
+
+    if (tagsChanged) {
+      setVisibleCount(null); // Reset to measuring mode when tags change
+      return;
+    }
+    if (visibleCount !== null) return; // Already settled
+
+    const container = containerRef.current;
+    if (!container || tags.length === 0) { setVisibleCount(0); return; }
+
+    const containerRight = container.getBoundingClientRect().right;
+    const els = Array.from(container.querySelectorAll<HTMLElement>('[data-tag]'));
+
+    let count = els.length;
+    for (let i = 0; i < els.length; i++) {
+      if (els[i].getBoundingClientRect().right > containerRight + 1) { count = i; break; }
+    }
+    setVisibleCount(count);
+  });
+
+  const displayCount = visibleCount ?? tags.length;
+  const overflowCount = tags.length - displayCount;
+
+  return (
+    <div ref={containerRef} className="flex items-center gap-1 overflow-hidden h-full min-w-0">
+      {tags.slice(0, displayCount).map(tag => (
+        <span
+          key={tag.id}
+          data-tag
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-en text-[10px] shrink-0"
+          style={{ background: 'rgba(255,255,255,0.22)', color: '#faf3df' }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
+            aria-hidden="true"
+          />
+          {tag.name}
+        </span>
+      ))}
+      {overflowCount > 0 && (
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full font-en text-[10px] shrink-0"
+          style={{ background: 'rgba(255,255,255,0.15)', color: '#faf3df', opacity: 0.85 }}
+        >
+          +{overflowCount}
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface ComprehensionEntry {
   text_id: number;
@@ -97,7 +158,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
         {processingTexts.map(entry => (
           <div
             key={`processing-${entry.id}`}
-            className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 border"
+            className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 border h-[100px]"
             style={{
               background: 'var(--yg-paper-hi)',
               borderColor: 'var(--yg-rule)',
@@ -188,7 +249,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                   style={{ textDecoration: 'none' }}
                 >
                   <div
-                    className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 pr-12"
+                    className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 pr-12 h-[100px]"
                     style={{ background: gradient, color: '#faf3df', boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
                   >
                     {/* Sheen */}
@@ -205,24 +266,9 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                       <div className="font-en text-[11px] opacity-70 mt-0.5">
                         {isReparsing ? 'Reparsing…' : lastRead}
                       </div>
-                      {entryTags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {entryTags.map(tag => (
-                            <span
-                              key={tag.id}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-en text-[10px]"
-                              style={{ background: 'rgba(255,255,255,0.22)', color: '#faf3df' }}
-                            >
-                              <span
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
-                                aria-hidden="true"
-                              />
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="h-5 mt-1.5 min-w-0">
+                        <TagPills tags={entryTags} />
+                      </div>
                     </div>
                     {/* Progress */}
                     <div className="relative shrink-0 text-right">
