@@ -10,6 +10,9 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     exclude: ['**/node_modules/**', '**/e2e/**'],
     fileParallelism: false,
+    env: {
+      TEST_DATABASE_URL: 'postgresql://localhost/shiori_test',
+    },
   },
   resolve: {
     alias: {
