@@ -27,8 +27,8 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
   const tintStyle: React.CSSProperties = status === 'seen'
     ? { background: 'var(--yg-seen)', borderBottom: '1px solid transparent' }
     : status === 'known'
-      ? { background: 'var(--yg-known)', borderBottom: '1px solid transparent' }
-      : { borderBottom: '1.5px dotted var(--yg-coral)' };
+      ? {}
+      : { background: 'var(--yg-known)', borderBottom: '1px solid transparent' };
 
   return (
     <span
@@ -51,7 +51,7 @@ export function WordToken({ token, word, furiganaOverride, showFurigana, onWordC
         {token.surface}
         <rt
           aria-hidden="true"
-          className={showFurigana ? '' : 'hidden'}
+          className={showFurigana && status !== 'known' ? '' : 'hidden'}
           style={{
             fontSize: '0.42em',
             fontFamily: 'var(--font-zen-mincho), serif',

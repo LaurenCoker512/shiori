@@ -137,8 +137,13 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     <div
       style={{ '--reader-jp-font': jpFontFamily, '--reader-font-size': `${fontSize}px` } as React.CSSProperties}
     >
-      {/* Toolbar */}
-      <div className="flex justify-end gap-2 mb-5 sticky top-16 z-10 py-3 -mx-8 px-8" style={{ background: 'transparent' }}>
+      {/*
+        Buttons are sticky and rendered first. The negative bottom margin (-mb-11)
+        collapses their space so the legend div below starts at the same y position,
+        giving the appearance of a single shared row on load. As the user scrolls,
+        the legend leaves while the buttons remain stuck.
+      */}
+      <div className="sticky top-[76px] z-10 flex justify-end items-center gap-2 h-11 -mb-11">
         <button
           type="button"
           onClick={toggleFontFamily}
@@ -180,11 +185,11 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
         </button>
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-4 mb-5 font-en text-[11px]" style={{ color: 'var(--yg-ink-soft)' }}>
+      {/* Legend — normal flow, same line as buttons above on load, scrolls away */}
+      <div className="flex items-center gap-4 h-11 mb-5 font-en text-[11px]" style={{ color: 'var(--yg-ink-soft)' }}>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--yg-known)' }} aria-hidden="true" />
-          Known
+          New
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--yg-seen)' }} aria-hidden="true" />
@@ -193,10 +198,10 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
         <span className="inline-flex items-center gap-1.5">
           <span
             className="w-3 h-3 rounded-sm"
-            style={{ border: '1.5px dotted var(--yg-coral)' }}
+            style={{ border: '1.5px solid var(--yg-rule)' }}
             aria-hidden="true"
           />
-          New
+          Known
         </span>
       </div>
 
