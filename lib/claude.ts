@@ -109,7 +109,7 @@ Rules:
 - dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
 
 Text to tokenize:
-${chunk}`, 2048);
+${chunk}`, 8192);
 
   console.log(`[tokenize] chunk=${chunk.length} chars, model=${config.model}, response=${raw.length} chars`);
   const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();

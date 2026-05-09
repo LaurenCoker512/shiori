@@ -54,6 +54,7 @@ export function ImportForm() {
         window.dispatchEvent(new Event('shiori-import-created'));
       } catch { /* storage unavailable — toast won't appear but import still works */ }
       router.push('/');
+      router.refresh();
     } catch {
       setError('Import failed');
     } finally {
