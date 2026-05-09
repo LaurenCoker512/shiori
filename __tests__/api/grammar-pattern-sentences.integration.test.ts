@@ -19,9 +19,6 @@ const USER_1: SessionUser = {
   id: 1,
   name: 'User One',
   email: 'user1@example.com',
-  anthropic_api_key: null,
-  ai_provider: 'anthropic',
-  anthropic_model: 'claude-sonnet-4-6',
   openrouter_api_key: null,
   openrouter_model: 'anthropic/claude-sonnet-4-6',
 };

@@ -19,9 +19,6 @@ const FAKE_USER: SessionUser = {
   id: 1,
   name: 'Test User',
   email: 'test@example.com',
-  anthropic_api_key: null,
-  ai_provider: 'anthropic',
-  anthropic_model: 'claude-sonnet-4-6',
   openrouter_api_key: null,
   openrouter_model: 'anthropic/claude-sonnet-4-6',
 };
@@ -67,12 +64,9 @@ describeIfDb('PATCH /api/user — integration', () => {
   async function getUser() {
     const result = await testPool.query<{
       name: string;
-      ai_provider: string;
-      anthropic_api_key: string | null;
-      anthropic_model: string;
       openrouter_api_key: string | null;
       openrouter_model: string;
-    }>('SELECT name, ai_provider, anthropic_api_key, anthropic_model, openrouter_api_key, openrouter_model FROM users WHERE id = 1');
+    }>('SELECT name, openrouter_api_key, openrouter_model FROM users WHERE id = 1');
     return result.rows[0];
   }
 
@@ -117,70 +111,6 @@ describeIfDb('PATCH /api/user — integration', () => {
     expect(response.status).toBe(400);
   });
 
-  it('provider switch to openrouter → updates DB', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ ai_provider: 'openrouter' }));
-    expect(response.status).toBe(200);
-
-    const row = await getUser();
-    expect(row.ai_provider).toBe('openrouter');
-  });
-
-  it('provider switch to anthropic → updates DB', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ ai_provider: 'anthropic' }));
-    expect(response.status).toBe(200);
-
-    const row = await getUser();
-    expect(row.ai_provider).toBe('anthropic');
-  });
-
-  it('invalid provider → 400', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ ai_provider: 'openai' }));
-    expect(response.status).toBe(400);
-  });
-
-  it('valid anthropic_api_key → stored in DB', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ anthropic_api_key: 'sk-ant-abc123' }));
-    expect(response.status).toBe(200);
-
-    const row = await getUser();
-    expect(row.anthropic_api_key).toBe('sk-ant-abc123');
-  });
-
-  it('empty anthropic_api_key string → clears key in DB', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    await PATCH(makeRequest({ anthropic_api_key: 'sk-ant-abc123' }));
-    const response = await PATCH(makeRequest({ anthropic_api_key: '' }));
-    expect(response.status).toBe(200);
-
-    const row = await getUser();
-    expect(row.anthropic_api_key).toBeNull();
-  });
-
-  it('anthropic_api_key without sk-ant- prefix → 400', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ anthropic_api_key: 'invalid-key' }));
-    expect(response.status).toBe(400);
-  });
-
-  it('valid anthropic_model → updates DB', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ anthropic_model: 'claude-haiku-4-5-20251001' }));
-    expect(response.status).toBe(200);
-
-    const row = await getUser();
-    expect(row.anthropic_model).toBe('claude-haiku-4-5-20251001');
-  });
-
-  it('invalid anthropic_model → 400', async () => {
-    mockGetSession.mockResolvedValue(FAKE_USER);
-    const response = await PATCH(makeRequest({ anthropic_model: 'gpt-4' }));
-    expect(response.status).toBe(400);
-  });
-
   it('valid openrouter_api_key → stored in DB', async () => {
     mockGetSession.mockResolvedValue(FAKE_USER);
     const response = await PATCH(makeRequest({ openrouter_api_key: 'sk-or-xyz789' }));
@@ -188,6 +118,16 @@ describeIfDb('PATCH /api/user — integration', () => {
 
     const row = await getUser();
     expect(row.openrouter_api_key).toBe('sk-or-xyz789');
+  });
+
+  it('empty openrouter_api_key string → clears key in DB', async () => {
+    mockGetSession.mockResolvedValue(FAKE_USER);
+    await PATCH(makeRequest({ openrouter_api_key: 'sk-or-xyz789' }));
+    const response = await PATCH(makeRequest({ openrouter_api_key: '' }));
+    expect(response.status).toBe(200);
+
+    const row = await getUser();
+    expect(row.openrouter_api_key).toBeNull();
   });
 
   it('openrouter_api_key without sk-or- prefix → 400', async () => {

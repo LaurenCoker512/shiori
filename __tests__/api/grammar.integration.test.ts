@@ -43,7 +43,7 @@ describeIfDb('GET /api/sentences/[textId]/[sentenceIndex]/grammar — integratio
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
     mockGetSession.mockResolvedValue({
       id: 1, name: 'Test', email: 'test@example.com',
-      anthropic_api_key: 'sk-ant-test', ai_provider: 'anthropic' as const, anthropic_model: 'claude-sonnet-4-6',
+      
       openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
     });
   });

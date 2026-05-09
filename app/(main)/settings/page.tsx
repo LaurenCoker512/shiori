@@ -37,10 +37,7 @@ export default async function SettingsPage() {
         style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}
       >
         <ApiKeyForm
-          hasAnthropicKey={user.anthropic_api_key !== null}
           hasOpenRouterKey={user.openrouter_api_key !== null}
-          currentProvider={user.ai_provider}
-          anthropicModel={user.anthropic_model}
           openrouterModel={user.openrouter_model}
         />
       </div>

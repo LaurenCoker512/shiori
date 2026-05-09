@@ -20,7 +20,6 @@ import type { SessionUser } from '@/lib/session';
 
 const FAKE_USER: SessionUser = {
   id: 1, name: 'Test', email: 'test@example.com',
-  anthropic_api_key: 'sk-ant-test', ai_provider: 'anthropic', anthropic_model: 'claude-sonnet-4-6',
   openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
 };
 
