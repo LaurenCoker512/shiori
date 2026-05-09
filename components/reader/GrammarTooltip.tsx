@@ -41,15 +41,24 @@ export function GrammarTooltip({
   }, [textId, sentenceIndex]);
 
   return (
-    <span
-      className="block mt-2 rounded-[10px] p-4 font-en text-sm"
-      style={{
-        background: 'var(--yg-paper)',
-        border: '1px solid var(--yg-rule)',
-      }}
+    <div
+      role="dialog"
       aria-label="Grammar analysis"
+      className="fixed z-40 overflow-hidden"
+      style={{
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 'min(460px, calc(100vw - 32px))',
+        maxHeight: 'calc(100vh - 48px)',
+        background: 'var(--yg-paper-hi)',
+        border: '1px solid var(--yg-rule)',
+        borderRadius: 16,
+        boxShadow: '0 12px 40px rgba(0,0,0,0.10)',
+        animation: 'yg-slide-up 0.15s ease',
+      }}
     >
-      <span className="flex justify-between items-start mb-2">
+      <div className="flex justify-between items-center px-5 pt-4 pb-3 border-b" style={{ borderColor: 'var(--yg-rule)' }}>
         <span
           className="font-en text-[10px] font-semibold uppercase tracking-[1.4px]"
           style={{ color: 'var(--yg-ink-muted)' }}
@@ -57,45 +66,47 @@ export function GrammarTooltip({
           Grammar
         </span>
         <button
-          className="font-en text-[11px] ml-2"
+          className="font-en text-[11px]"
           style={{ color: 'var(--yg-ink-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-          aria-label="Hide grammar analysis"
-          onClick={e => { e.stopPropagation(); onClose(); }}
+          aria-label="Close grammar analysis"
+          onClick={onClose}
         >
-          Hide
+          Close
         </button>
-      </span>
-      <span aria-live="polite" aria-atomic="true">
-        {loading && <Spinner />}
-        {!loading && error && <span style={{ color: 'var(--yg-ink-soft)' }}>Grammar analysis unavailable</span>}
-        {!loading && !error && patterns !== null && patterns.length === 0 && (
-          <span style={{ color: 'var(--yg-ink-muted)' }}>No grammar patterns found</span>
-        )}
-        {!loading && !error && patterns !== null && patterns.length > 0 && (
-          <ul className="space-y-2">
-            {patterns.map(pattern => (
-              <li key={pattern.id}>
-                <div className="flex items-center gap-2">
-                  <strong className="font-jp text-[15px]" style={{ color: 'var(--yg-ink)' }}>
-                    {pattern.pattern}
-                  </strong>
-                  {pattern.jlpt_level !== null && (
-                    <span
-                      className="font-en text-[10px] font-semibold tracking-[1px]"
-                      style={{ color: 'var(--yg-coral)' }}
-                    >
-                      {pattern.jlpt_level}
-                    </span>
-                  )}
-                </div>
-                <p className="font-en text-[13px] mt-0.5 leading-relaxed" style={{ color: 'var(--yg-ink-soft)' }}>
-                  {pattern.description_en}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </span>
-    </span>
+      </div>
+      <div className="overflow-y-auto px-5 py-4" style={{ maxHeight: 'calc(100vh - 48px - 44px)' }}>
+        <div aria-live="polite" aria-atomic="true">
+          {loading && <Spinner />}
+          {!loading && error && <span className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>Grammar analysis unavailable</span>}
+          {!loading && !error && patterns !== null && patterns.length === 0 && (
+            <span className="font-en text-sm" style={{ color: 'var(--yg-ink-muted)' }}>No grammar patterns found</span>
+          )}
+          {!loading && !error && patterns !== null && patterns.length > 0 && (
+            <ul className="space-y-3">
+              {patterns.map(pattern => (
+                <li key={pattern.id}>
+                  <div className="flex items-center gap-2">
+                    <strong className="font-jp text-[15px]" style={{ color: 'var(--yg-ink)' }}>
+                      {pattern.pattern}
+                    </strong>
+                    {pattern.jlpt_level !== null && (
+                      <span
+                        className="font-en text-[10px] font-semibold tracking-[1px]"
+                        style={{ color: 'var(--yg-coral)' }}
+                      >
+                        {pattern.jlpt_level}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-en text-[13px] mt-0.5 leading-relaxed" style={{ color: 'var(--yg-ink-soft)' }}>
+                    {pattern.description_en}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

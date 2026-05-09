@@ -51,7 +51,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
@@ -64,7 +63,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
     expect(container.querySelector('p')).toBeInTheDocument();
@@ -77,7 +75,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
     expect(container.querySelector('[data-grammar-trigger]')).not.toBeInTheDocument();
@@ -95,7 +92,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
 
@@ -120,7 +116,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
 
@@ -144,7 +139,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
 
@@ -168,7 +162,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
 
@@ -193,7 +186,6 @@ describe('SentenceBlock', () => {
         wordStatusMap={{ 'テスト|テスト': mockWord }}
         furiganaOverrides={{}}
         showFurigana={true}
-        textId={1}
       />,
     );
 

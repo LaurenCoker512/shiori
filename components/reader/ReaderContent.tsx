@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ParsedContent, Word, FuriganaOverride } from '@/lib/types';
+import type { ParsedContent, Word, FuriganaOverride, GrammarPattern } from '@/lib/types';
 import { SentenceBlock } from './SentenceBlock';
 import { WordPopover } from './WordPopover';
+import { GrammarTooltip } from './GrammarTooltip';
 
 interface ReaderContentProps {
   content: ParsedContent;
@@ -19,6 +20,11 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
   const [wordMap, setWordMap] = useState<Record<string, Word>>(wordStatusMap);
   const [popoverWord, setPopoverWord] = useState<Word | null>(null);
   const [popoverAnchor, setPopoverAnchor] = useState<DOMRect | null>(null);
+  const [grammarCache, setGrammarCache] = useState<Map<number, GrammarPattern[]>>(new Map());
+  const [activeGrammar, setActiveGrammar] = useState<{
+    sentenceIndex: number;
+    phase: 'prompt' | 'showing';
+  } | null>(null);
   const [popoverSurface, setPopoverSurface] = useState<string | null>(null);
   const [popoverFurigana, setPopoverFurigana] = useState<string | null>(null);
   const [overrideMap, setOverrideMap] = useState<Record<string, string>>(() => {
@@ -98,6 +104,21 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
 
   function handleFuriganaEdit(surface: string, newReading: string) {
     setOverrideMap(prev => ({ ...prev, [surface]: newReading }));
+  }
+
+  function handleSentenceClick(sentenceIndex: number): void {
+    if (activeGrammar !== null && activeGrammar.sentenceIndex === sentenceIndex) return;
+    const cached = grammarCache.get(sentenceIndex);
+    setActiveGrammar({ sentenceIndex, phase: cached !== undefined ? 'showing' : 'prompt' });
+  }
+
+  function handleGrammarConfirm() {
+    if (activeGrammar === null) return;
+    setActiveGrammar({ ...activeGrammar, phase: 'showing' });
+  }
+
+  function handlePatternsLoaded(sentenceIndex: number, patterns: GrammarPattern[]) {
+    setGrammarCache(prev => new Map(prev).set(sentenceIndex, patterns));
   }
 
   const jpFontFamily = fontFamily === 'sans'
@@ -196,7 +217,10 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
             furiganaOverrides={overrideMap}
             showFurigana={showFurigana}
             onWordClick={handleWordClick}
-            textId={textId}
+            onSentenceClick={handleSentenceClick}
+            grammarPhase={activeGrammar?.sentenceIndex === sentence.sentence_index ? activeGrammar.phase : null}
+            onGrammarConfirm={handleGrammarConfirm}
+            onGrammarCancel={() => setActiveGrammar(null)}
           />
         ))}
       </div>
@@ -217,6 +241,16 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           onClose={() => setPopoverWord(null)}
           onStatusUpdate={handleStatusUpdate}
           onFuriganaEdit={handleFuriganaEdit}
+        />
+      )}
+
+      {activeGrammar?.phase === 'showing' && (
+        <GrammarTooltip
+          textId={textId}
+          sentenceIndex={activeGrammar.sentenceIndex}
+          initialPatterns={grammarCache.get(activeGrammar.sentenceIndex) ?? null}
+          onPatternsLoaded={patterns => handlePatternsLoaded(activeGrammar.sentenceIndex, patterns)}
+          onClose={() => setActiveGrammar(null)}
         />
       )}
     </div>
