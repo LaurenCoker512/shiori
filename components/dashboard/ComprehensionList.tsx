@@ -1,4 +1,10 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ComprehensionEntry {
   text_id: number;
@@ -17,6 +23,12 @@ interface ComprehensionListProps {
   processingTexts?: ProcessingEntry[];
 }
 
+type CardAction =
+  | { type: 'idle' }
+  | { type: 'renaming'; id: number; inputValue: string; error: string }
+  | { type: 'deleting'; id: number; title: string }
+  | { type: 'reparsing'; id: number };
+
 const MOODS = ['persimmon', 'moss', 'twilight', 'gold'];
 
 const MOOD_GRADIENTS: Record<string, string> = {
@@ -27,6 +39,9 @@ const MOOD_GRADIENTS: Record<string, string> = {
 };
 
 export function ComprehensionList({ comprehension, processingTexts = [] }: ComprehensionListProps) {
+  const router = useRouter();
+  const [cardAction, setCardAction] = useState<CardAction>({ type: 'idle' });
+
   if (comprehension.length === 0 && processingTexts.length === 0) {
     return (
       <p className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>
@@ -35,82 +50,195 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
     );
   }
 
+  async function handleRenameSubmit(e: React.FormEvent, id: number) {
+    e.preventDefault();
+    if (cardAction.type !== 'renaming') return;
+    const trimmed = cardAction.inputValue.trim();
+    if (trimmed === '') {
+      setCardAction({ ...cardAction, error: 'Title cannot be empty' });
+      return;
+    }
+    await fetch(`/api/texts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: trimmed }),
+    });
+    setCardAction({ type: 'idle' });
+    router.refresh();
+  }
+
+  async function handleDelete(id: number) {
+    await fetch(`/api/texts/${id}`, { method: 'DELETE' });
+    setCardAction({ type: 'idle' });
+    router.refresh();
+  }
+
+  async function handleReparse(id: number) {
+    setCardAction({ type: 'reparsing', id });
+    await fetch(`/api/texts/${id}/reparse`, { method: 'POST' });
+    setCardAction({ type: 'idle' });
+    router.refresh();
+  }
+
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-      {processingTexts.map(entry => (
-        <div
-          key={`processing-${entry.id}`}
-          className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 border"
-          style={{
-            background: 'var(--yg-paper-hi)',
-            borderColor: 'var(--yg-rule)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-          }}
-          aria-label={`${entry.title} — processing`}
-        >
-          <div className="flex-1 min-w-0">
-            <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate" style={{ color: 'var(--yg-ink)' }}>
-              {entry.title}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
-                style={{ background: 'var(--yg-coral)' }}
-                aria-hidden="true"
-              />
-              <span className="font-en text-[11px]" style={{ color: 'var(--yg-ink-muted)' }}>Processing…</span>
+    <>
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+        {processingTexts.map(entry => (
+          <div
+            key={`processing-${entry.id}`}
+            className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 border"
+            style={{
+              background: 'var(--yg-paper-hi)',
+              borderColor: 'var(--yg-rule)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+            }}
+            aria-label={`${entry.title} — processing`}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate" style={{ color: 'var(--yg-ink)' }}>
+                {entry.title}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+                  style={{ background: 'var(--yg-coral)' }}
+                  aria-hidden="true"
+                />
+                <span className="font-en text-[11px]" style={{ color: 'var(--yg-ink-muted)' }}>Processing…</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-      {comprehension.map((entry, idx) => {
-        const gradient = MOOD_GRADIENTS[MOODS[idx % MOODS.length]];
-        const lastRead = entry.last_read_at !== null
-          ? new Date(entry.last_read_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
-          : 'Not started';
+        ))}
 
-        return (
-          <Link
-            key={entry.text_id}
-            href={`/texts/${entry.text_id}`}
-            className="block"
-            style={{ textDecoration: 'none' }}
-          >
-            <div
-              className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4"
-              style={{ background: gradient, color: '#faf3df', boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
-            >
-              {/* Sheen */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%)' }}
-                aria-hidden="true"
-              />
-              {/* Title */}
-              <div className="relative flex-1 min-w-0">
-                <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate">
-                  {entry.title}
-                </div>
-                <div className="font-en text-[11px] opacity-70 mt-0.5">{lastRead}</div>
-              </div>
-              {/* Progress */}
-              <div className="relative shrink-0 text-right">
-                <div className="font-en text-[22px] font-semibold leading-none">{entry.pct_known}%</div>
-                <div className="font-en text-[10px] opacity-70 mt-0.5">known</div>
+        {comprehension.map((entry, idx) => {
+          const gradient = MOOD_GRADIENTS[MOODS[idx % MOODS.length]];
+          const lastRead = entry.last_read_at !== null
+            ? new Date(entry.last_read_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+            : 'Not started';
+          const isRenaming = cardAction.type === 'renaming' && cardAction.id === entry.text_id;
+          const isReparsing = cardAction.type === 'reparsing' && cardAction.id === entry.text_id;
+
+          return (
+            <div key={entry.text_id} className="relative">
+              {isRenaming ? (
                 <div
-                  className="h-1 rounded-sm mt-2"
-                  style={{ width: 64, background: 'rgba(250,243,223,0.25)' }}
+                  className="rounded-xl overflow-hidden px-5 py-4"
+                  style={{ background: gradient, color: '#faf3df', boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
                 >
                   <div
-                    className="h-full rounded-sm"
-                    style={{ width: `${entry.pct_known}%`, background: '#faf3df' }}
+                    className="absolute inset-0 pointer-events-none rounded-xl"
+                    style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%)' }}
+                    aria-hidden="true"
                   />
+                  <form
+                    onSubmit={e => { void handleRenameSubmit(e, entry.text_id); }}
+                    className="relative flex items-center gap-2"
+                  >
+                    <input
+                      aria-label="Text title"
+                      value={cardAction.inputValue}
+                      onChange={e => setCardAction({ ...cardAction, inputValue: e.target.value })}
+                      className="flex-1 font-jp text-[18px] font-medium rounded px-2 py-0.5 min-w-0"
+                      style={{
+                        background: 'rgba(250,243,223,0.25)',
+                        border: '1px solid rgba(250,243,223,0.6)',
+                        color: '#faf3df',
+                        outline: 'none',
+                      }}
+                      autoFocus
+                    />
+                    {cardAction.error !== '' && (
+                      <span role="alert" className="font-en text-xs shrink-0" style={{ color: '#faf3df', opacity: 0.8 }}>
+                        {cardAction.error}
+                      </span>
+                    )}
+                    <button
+                      type="submit"
+                      className="font-en text-xs font-medium min-h-11 px-2 shrink-0"
+                      style={{ color: '#faf3df', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.9 }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCardAction({ type: 'idle' })}
+                      className="font-en text-xs min-h-11 px-2 shrink-0"
+                      style={{ color: '#faf3df', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7 }}
+                    >
+                      Cancel
+                    </button>
+                  </form>
                 </div>
-              </div>
+              ) : (
+                <Link
+                  href={`/texts/${entry.text_id}`}
+                  className="block"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div
+                    className="relative rounded-xl overflow-hidden flex items-center gap-4 px-5 py-4 pr-12"
+                    style={{ background: gradient, color: '#faf3df', boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
+                  >
+                    {/* Sheen */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%)' }}
+                      aria-hidden="true"
+                    />
+                    {/* Title */}
+                    <div className="relative flex-1 min-w-0">
+                      <div className="font-jp text-[18px] font-medium leading-[1.3] tracking-tight truncate">
+                        {entry.title}
+                      </div>
+                      <div className="font-en text-[11px] opacity-70 mt-0.5">
+                        {isReparsing ? 'Reparsing…' : lastRead}
+                      </div>
+                    </div>
+                    {/* Progress */}
+                    <div className="relative shrink-0 text-right">
+                      <div className="font-en text-[22px] font-semibold leading-none">{entry.pct_known}%</div>
+                      <div className="font-en text-[10px] opacity-70 mt-0.5">known</div>
+                      <div
+                        className="h-1 rounded-sm mt-2"
+                        style={{ width: 64, background: 'rgba(250,243,223,0.25)' }}
+                      >
+                        <div
+                          className="h-full rounded-sm"
+                          style={{ width: `${entry.pct_known}%`, background: '#faf3df' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Overflow menu — sits outside the Link to avoid triggering navigation */}
+              {!isRenaming && (
+                <div className="absolute top-2 right-1" onClick={e => e.stopPropagation()}>
+                  {isReparsing ? (
+                    <span className="font-en text-[11px] px-2" style={{ color: 'rgba(250,243,223,0.7)' }}>…</span>
+                  ) : (
+                    <OverflowMenu
+                      variant="light"
+                      onRename={() => setCardAction({ type: 'renaming', id: entry.text_id, inputValue: entry.title, error: '' })}
+                      onDelete={() => setCardAction({ type: 'deleting', id: entry.text_id, title: entry.title })}
+                      onReparse={() => { void handleReparse(entry.text_id); }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
-          </Link>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      {cardAction.type === 'deleting' && (
+        <ConfirmDialog
+          message={`Delete "${cardAction.title}"? This action cannot be undone.`}
+          onConfirm={() => { void handleDelete(cardAction.id); }}
+          onCancel={() => setCardAction({ type: 'idle' })}
+        />
+      )}
+    </>
   );
 }

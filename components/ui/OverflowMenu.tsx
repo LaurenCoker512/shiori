@@ -6,10 +6,13 @@ interface OverflowMenuProps {
   onRename: () => void;
   onDelete: () => void;
   onReparse?: () => void;
+  variant?: 'default' | 'light';
 }
 
-export function OverflowMenu({ onRename, onDelete, onReparse }: OverflowMenuProps) {
+export function OverflowMenu({ onRename, onDelete, onReparse, variant = 'default' }: OverflowMenuProps) {
   const [open, setOpen] = useState(false);
+
+  const isLight = variant === 'light';
 
   return (
     <div className="relative">
@@ -17,7 +20,13 @@ export function OverflowMenu({ onRename, onDelete, onReparse }: OverflowMenuProp
         type="button"
         aria-label="More options"
         aria-expanded={open}
-        className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-gray-100 text-xl leading-none"
+        className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-xl leading-none transition-colors"
+        style={{
+          color: isLight ? 'rgba(250,243,223,0.75)' : 'var(--yg-ink-muted)',
+          backgroundColor: open
+            ? isLight ? 'rgba(250,243,223,0.15)' : 'var(--yg-rule-soft)'
+            : 'transparent',
+        }}
         onClick={() => setOpen(prev => !prev)}
       >
         ⋮
@@ -26,13 +35,19 @@ export function OverflowMenu({ onRename, onDelete, onReparse }: OverflowMenuProp
         <div
           role="menu"
           aria-label="Text options"
-          className="absolute right-0 top-full mt-1 w-36 bg-white border rounded shadow-md z-20"
+          className="absolute right-0 top-full mt-1.5 w-40 rounded-xl overflow-hidden z-20"
+          style={{
+            background: 'var(--yg-paper-hi)',
+            border: '1px solid var(--yg-rule)',
+            boxShadow: '0 8px 28px rgba(0,0,0,0.10)',
+          }}
         >
           {onReparse !== undefined && (
             <button
               type="button"
               role="menuitem"
-              className="w-full text-left min-h-11 px-4 py-2 text-sm hover:bg-gray-50 flex items-center"
+              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+              style={{ color: 'var(--yg-ink)' }}
               onClick={() => { setOpen(false); onReparse(); }}
             >
               Reparse
@@ -41,15 +56,18 @@ export function OverflowMenu({ onRename, onDelete, onReparse }: OverflowMenuProp
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left min-h-11 px-4 py-2 text-sm hover:bg-gray-50 flex items-center"
+            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+            style={{ color: 'var(--yg-ink)' }}
             onClick={() => { setOpen(false); onRename(); }}
           >
             Rename
           </button>
+          <div style={{ borderTop: '1px solid var(--yg-rule)' }} />
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left min-h-11 px-4 py-2 text-sm text-red-600 hover:bg-gray-50 flex items-center"
+            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+            style={{ color: 'var(--yg-coral-dark)' }}
             onClick={() => { setOpen(false); onDelete(); }}
           >
             Delete

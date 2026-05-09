@@ -105,7 +105,7 @@ describe('WordBrowser', () => {
   });
 
   it('pagination previous button disabled on first page', async () => {
-    mockFetch([makeWord()], 50);
+    mockFetch([makeWord()], 1);
 
     render(<WordBrowser />);
 

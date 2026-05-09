@@ -98,7 +98,7 @@ describe('ReaderHeader', () => {
     render(<ReaderHeader title="My Text" textId={3} />);
     await openMenu(user);
     await user.click(screen.getByRole('menuitem', { name: /delete/i }));
-    await user.click(screen.getByRole('button', { name: /^confirm$/i }));
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/texts/3', { method: 'DELETE' });
