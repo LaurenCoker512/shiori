@@ -106,19 +106,33 @@ export default async function LibraryPage() {
               <div className="font-en text-[11px] opacity-75 tracking-[2px] uppercase mb-2.5">
                 Continue reading
               </div>
-              <h2 className="font-jp text-[34px] font-medium mb-1 tracking-tight leading-[1.1]">
-                {mostRecentText.title}
-              </h2>
-              <div className="flex gap-7 mb-5 mt-2">
-                <Stat n={`${mostRecentText.pct_known}%`} l="words recognized" />
+              <div className="flex items-center gap-6">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-en text-[28px] font-semibold mb-4 tracking-tight leading-[1.2] truncate">
+                    {mostRecentText.title}
+                  </h2>
+                  <Link
+                    href={`/texts/${mostRecentText.text_id}`}
+                    className="font-en text-[13px] font-semibold inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full"
+                    style={{ background: '#faf3df', color: 'var(--yg-coral-dark)' }}
+                  >
+                    Resume <span>→</span>
+                  </Link>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-en text-[22px] font-semibold leading-none">{mostRecentText.pct_known}%</div>
+                  <div className="font-en text-[10px] opacity-70 mt-0.5">known</div>
+                  <div
+                    className="h-1 rounded-sm mt-2"
+                    style={{ width: 64, background: 'rgba(250,243,223,0.25)' }}
+                  >
+                    <div
+                      className="h-full rounded-sm"
+                      style={{ width: `${mostRecentText.pct_known}%`, background: '#faf3df' }}
+                    />
+                  </div>
+                </div>
               </div>
-              <Link
-                href={`/texts/${mostRecentText.text_id}`}
-                className="font-en text-[13px] font-semibold inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full"
-                style={{ background: '#faf3df', color: 'var(--yg-coral-dark)' }}
-              >
-                Resume <span>→</span>
-              </Link>
             </div>
           </div>
         ) : (
@@ -152,11 +166,3 @@ export default async function LibraryPage() {
   );
 }
 
-function Stat({ n, l }: { n: string; l: string }) {
-  return (
-    <div>
-      <div className="font-jp text-[28px] font-medium leading-none tracking-tight">{n}</div>
-      <div className="font-en text-[11px] opacity-80 mt-1">{l}</div>
-    </div>
-  );
-}
