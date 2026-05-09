@@ -2,13 +2,7 @@ import { parseHeadingSentinels } from '@/lib/text-processing';
 import { tokenizeText, buildLLMConfig } from '@/lib/claude';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function POST(
   request: Request,
@@ -62,12 +56,14 @@ export async function POST(
 
   const contentWords = parsedContent.flatMap(s => s.tokens).filter(t => t.is_content_word);
 
-  for (const token of contentWords) {
+  if (contentWords.length > 0) {
+    const forms = contentWords.map(t => t.dictionary_form);
+    const readings = contentWords.map(t => t.dict_reading);
     await query(
       `INSERT INTO words (user_id, dictionary_form, reading)
-       VALUES ($1, $2, $3)
+       SELECT $1, unnest($2::text[]), unnest($3::text[])
        ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-      [user.id, token.dictionary_form, token.dict_reading],
+      [user.id, forms, readings],
     );
   }
 

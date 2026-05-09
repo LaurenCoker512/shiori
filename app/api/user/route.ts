@@ -1,14 +1,8 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { jsonResponse as json } from '@/lib/api';
 
 const ANTHROPIC_MODELS = ['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'] as const;
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export async function PATCH(request: Request): Promise<Response> {
   const user = await getSession();

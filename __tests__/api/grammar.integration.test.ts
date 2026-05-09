@@ -6,12 +6,15 @@ import { join } from 'path';
 const mockAnalyzeGrammar = vi.hoisted(() => vi.fn());
 const mockDescribeGrammarPattern = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/claude', () => ({
   analyzeGrammar: mockAnalyzeGrammar,
   describeGrammarPattern: mockDescribeGrammarPattern,
+  buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })),
 }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
+vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 
 import { GET } from '@/app/api/sentences/[textId]/[sentenceIndex]/grammar/route';
 
@@ -38,6 +41,11 @@ describeIfDb('GET /api/sentences/[textId]/[sentenceIndex]/grammar — integratio
     await testPool.query(migration);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
+    mockGetSession.mockResolvedValue({
+      id: 1, name: 'Test', email: 'test@example.com',
+      anthropic_api_key: 'sk-ant-test', ai_provider: 'anthropic' as const, anthropic_model: 'claude-sonnet-4-6',
+      openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
+    });
   });
 
   afterEach(async () => {
@@ -123,8 +131,14 @@ describeIfDb('GET /api/sentences/[textId]/[sentenceIndex]/grammar — integratio
     expect(data.patterns[0].pattern).toBe('〜ていた');
     expect(data.patterns[0].description_en).toBe('Past progressive tense.');
     expect(data.patterns[0].jlpt_level).toBe('N4');
-    expect(mockAnalyzeGrammar).toHaveBeenCalledWith('猫が食べていた。');
-    expect(mockDescribeGrammarPattern).toHaveBeenCalledWith('〜ていた');
+    expect(mockAnalyzeGrammar).toHaveBeenCalledWith(
+      { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' },
+      '猫が食べていた。',
+    );
+    expect(mockDescribeGrammarPattern).toHaveBeenCalledWith(
+      { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' },
+      '〜ていた',
+    );
 
     const gpRow = await testPool.query('SELECT * FROM grammar_patterns WHERE pattern = $1', ['〜ていた']);
     expect(gpRow.rows).toHaveLength(1);

@@ -109,9 +109,9 @@ Rules:
 - dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
 
 Text to tokenize:
-${chunk}`, 8192);
+${chunk}`, 2048);
 
-  console.log(`[tokenize] chunk=${chunk.length}, model=${config.model}, response=\n${raw}\n---`);
+  console.log(`[tokenize] chunk=${chunk.length} chars, model=${config.model}, response=${raw.length} chars`);
   const json = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   const compact = JSON.parse(json) as CompactResponse;
 

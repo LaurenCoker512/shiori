@@ -8,6 +8,7 @@ const mockToken = {
   surface: 'テスト',
   dictionary_form: 'テスト',
   reading: 'テスト',
+  dict_reading: 'テスト',
   is_content_word: true,
 };
 

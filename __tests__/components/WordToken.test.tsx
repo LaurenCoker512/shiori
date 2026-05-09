@@ -7,6 +7,7 @@ const contentToken: Token = {
   surface: '猫',
   dictionary_form: '猫',
   reading: 'ネコ',
+  dict_reading: 'ネコ',
   is_content_word: true,
 };
 
@@ -14,6 +15,7 @@ const nonContentToken: Token = {
   surface: 'は',
   dictionary_form: 'は',
   reading: 'は',
+  dict_reading: 'は',
   is_content_word: false,
 };
 

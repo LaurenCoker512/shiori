@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-async function checkNoViolations(page: Parameters<typeof AxeBuilder>[0]) {
+async function checkNoViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
     .analyze();

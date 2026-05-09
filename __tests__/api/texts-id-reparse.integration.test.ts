@@ -5,9 +5,14 @@ import { join } from 'path';
 
 const mockTokenizeText = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/claude', () => ({ tokenizeText: mockTokenizeText }));
+vi.mock('@/lib/claude', () => ({
+  tokenizeText: mockTokenizeText,
+  buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })),
+}));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
+vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 
 import { POST } from '@/app/api/texts/[id]/reparse/route';
 import type { ParsedContent } from '@/lib/types';
@@ -32,8 +37,8 @@ const originalParsed: ParsedContent = [
     sentence_index: 0,
     raw: '猫が好きです。',
     tokens: [
-      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
-      { surface: '好き', dictionary_form: '好き', reading: 'すき', pos: 'adjective', is_content_word: true },
+      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', dict_reading: 'ねこ', is_content_word: true },
+      { surface: '好き', dictionary_form: '好き', reading: 'すき', dict_reading: 'すき', is_content_word: true },
     ],
   },
 ];
@@ -43,8 +48,8 @@ const newParsed: ParsedContent = [
     sentence_index: 0,
     raw: '犬が走ります。',
     tokens: [
-      { surface: '犬', dictionary_form: '犬', reading: 'いぬ', pos: 'noun', is_content_word: true },
-      { surface: '走り', dictionary_form: '走る', reading: 'はしる', pos: 'verb', is_content_word: true },
+      { surface: '犬', dictionary_form: '犬', reading: 'いぬ', dict_reading: 'いぬ', is_content_word: true },
+      { surface: '走り', dictionary_form: '走る', reading: 'はしり', dict_reading: 'はしる', is_content_word: true },
     ],
   },
 ];
@@ -61,6 +66,11 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
     await testPool.query(migration);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
+    mockGetSession.mockResolvedValue({
+      id: 1, name: 'Test', email: 'test@example.com',
+      anthropic_api_key: 'sk-ant-test', ai_provider: 'anthropic' as const, anthropic_model: 'claude-sonnet-4-6',
+      openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
+    });
   });
 
   afterEach(async () => {

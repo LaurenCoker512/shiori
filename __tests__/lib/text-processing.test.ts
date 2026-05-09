@@ -7,6 +7,7 @@ describe('parseHeadingSentinels', () => {
     surface,
     dictionary_form: surface,
     reading: surface,
+    dict_reading: surface,
     is_content_word: true,
   });
 

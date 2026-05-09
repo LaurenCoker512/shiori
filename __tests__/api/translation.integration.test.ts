@@ -5,11 +5,20 @@ import { join } from 'path';
 
 const mockTranslateWord = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/claude', () => ({ translateWord: mockTranslateWord }));
+vi.mock('@/lib/claude', () => ({ translateWord: mockTranslateWord, buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })) }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
+vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 
 import { GET } from '@/app/api/words/[id]/translation/route';
+import type { SessionUser } from '@/lib/session';
+
+const FAKE_USER: SessionUser = {
+  id: 1, name: 'Test', email: 'test@example.com',
+  anthropic_api_key: 'sk-ant-test', ai_provider: 'anthropic', anthropic_model: 'claude-sonnet-4-6',
+  openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
+};
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
@@ -38,6 +47,7 @@ describeIfDb('GET /api/words/[id]/translation — integration', () => {
     await testPool.query(migration);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
+    mockGetSession.mockResolvedValue(FAKE_USER);
   });
 
   afterEach(async () => {
@@ -99,7 +109,11 @@ describeIfDb('GET /api/words/[id]/translation — integration', () => {
 
     await GET(makeGetRequest({ contextSentence: '猫が食べる。' }), makeParams(String(wordId)));
 
-    expect(mockTranslateWord).toHaveBeenCalledWith('食べる', '猫が食べる。');
+    expect(mockTranslateWord).toHaveBeenCalledWith(
+      { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' },
+      '食べる',
+      '猫が食べる。',
+    );
   });
 
   it('Claude throws → returns { error: "Translation unavailable" }, nothing persisted', async () => {

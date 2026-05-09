@@ -1,13 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
 import { createSession } from '@/lib/session';
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse as json } from '@/lib/api';
 
 export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as { name?: unknown; email?: unknown; password?: unknown };
@@ -15,7 +9,7 @@ export async function POST(request: Request): Promise<Response> {
   if (typeof body.name !== 'string' || body.name.trim() === '') {
     return json({ error: 'Name is required' }, 400);
   }
-  if (typeof body.email !== 'string' || !body.email.includes('@')) {
+  if (typeof body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email)) {
     return json({ error: 'Valid email is required' }, 400);
   }
   if (typeof body.password !== 'string' || body.password.length < 8) {

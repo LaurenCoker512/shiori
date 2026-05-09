@@ -1,13 +1,7 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import type { Word, FuriganaOverride } from '@/lib/types';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function GET(
   _request: Request,

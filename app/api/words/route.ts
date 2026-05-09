@@ -1,24 +1,20 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import type { Word, WordStatus, JlptLevel } from '@/lib/types';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function GET(request: Request): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status') as WordStatus | null;
-  const jlptLevel = searchParams.get('jlpt_level') as JlptLevel | null;
+  const statusParam = searchParams.get('status');
+  const status: WordStatus | null = (statusParam === 'unseen' || statusParam === 'seen' || statusParam === 'known') ? statusParam : null;
+  const jlptParam = searchParams.get('jlpt_level');
+  const jlptLevel: JlptLevel | null = (jlptParam === 'N5' || jlptParam === 'N4' || jlptParam === 'N3' || jlptParam === 'N2' || jlptParam === 'N1') ? jlptParam : null;
   const search = searchParams.get('search');
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-  const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '50', 10));
+  const pageSize = Math.min(1000, Math.max(1, parseInt(searchParams.get('pageSize') ?? '50', 10)));
   const offset = (page - 1) * pageSize;
 
   const [wordsResult, countResult, statusCountsResult] = await Promise.all([

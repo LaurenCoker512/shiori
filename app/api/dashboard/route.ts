@@ -1,13 +1,7 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import type { GrammarPattern } from '@/lib/types';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function GET(_request: Request): Promise<Response> {
   const user = await getSession();
@@ -17,7 +11,7 @@ export async function GET(_request: Request): Promise<Response> {
 
   const [seenResult, knownResult, comprehensionResult, grammarResult] = await Promise.all([
     query<{ date: string; count: string }>(
-      `SELECT DATE(seen_at) AS date, COUNT(*) AS count
+      `SELECT DATE(seen_at)::text AS date, COUNT(*) AS count
        FROM words
        WHERE user_id = $1 AND seen_at IS NOT NULL
        GROUP BY DATE(seen_at)
@@ -25,7 +19,7 @@ export async function GET(_request: Request): Promise<Response> {
       [uid],
     ),
     query<{ date: string; count: string }>(
-      `SELECT DATE(known_at) AS date, COUNT(*) AS count
+      `SELECT DATE(known_at)::text AS date, COUNT(*) AS count
        FROM words
        WHERE user_id = $1 AND known_at IS NOT NULL
        GROUP BY DATE(known_at)

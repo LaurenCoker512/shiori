@@ -2,13 +2,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { buildLLMConfig } from '@/lib/claude';
 import { processImport } from '@/lib/processImport';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function POST(request: Request): Promise<Response> {
   const user = await getSession();
@@ -29,6 +23,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const content = body.content ?? '';
+
+  if (content.length > 500_000) {
+    return jsonResponse({ error: 'Content must be 500 KB or less' }, 413);
+  }
 
   const textResult = await query<{ id: number }>(
     `INSERT INTO texts (user_id, title, raw_content, parsed_content, import_status)

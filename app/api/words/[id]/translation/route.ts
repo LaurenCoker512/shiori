@@ -3,13 +3,7 @@ import { getSession } from '@/lib/session';
 import { translateWord, buildLLMConfig } from '@/lib/claude';
 import { parseTranslations } from '@/lib/types';
 import type { Word } from '@/lib/types';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse } from '@/lib/api';
 
 export async function GET(
   request: Request,
@@ -44,7 +38,8 @@ export async function GET(
   }
 
   const { searchParams } = new URL(request.url);
-  const contextSentence = searchParams.get('contextSentence') ?? '';
+  const rawContext = searchParams.get('contextSentence') ?? '';
+  const contextSentence = rawContext.slice(0, 2000);
 
   try {
     const result = await translateWord(llmConfig, word.dictionary_form, contextSentence);

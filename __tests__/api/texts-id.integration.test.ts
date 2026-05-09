@@ -4,11 +4,20 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
+vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 
 import { GET, PATCH, DELETE } from '@/app/api/texts/[id]/route';
 import type { ParsedContent, Word } from '@/lib/types';
+import type { SessionUser } from '@/lib/session';
+
+const FAKE_USER: SessionUser = {
+  id: 1, name: 'Test', email: 'test@example.com',
+  anthropic_api_key: null, ai_provider: 'anthropic', anthropic_model: 'claude-sonnet-4-6',
+  openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
+};
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
@@ -30,7 +39,7 @@ const sampleParsedContent: ParsedContent = [
     sentence_index: 0,
     raw: '猫が好きです。',
     tokens: [
-      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', pos: 'noun', is_content_word: true },
+      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', dict_reading: 'ねこ', is_content_word: true },
     ],
   },
 ];
@@ -49,6 +58,7 @@ describeIfDb('GET/PATCH/DELETE /api/texts/[id] — integration', () => {
     await testPool.query(migration);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
+    mockGetSession.mockResolvedValue(FAKE_USER);
   });
 
   afterEach(async () => {

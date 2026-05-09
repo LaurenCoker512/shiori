@@ -10,6 +10,7 @@ const mockToken: Token = {
   surface: '猫',
   dictionary_form: '猫',
   reading: 'ネコ',
+  dict_reading: 'ネコ',
   is_content_word: true,
 };
 

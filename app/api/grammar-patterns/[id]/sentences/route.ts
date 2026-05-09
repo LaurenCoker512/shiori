@@ -1,16 +1,14 @@
 import { query } from '@/lib/db';
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { getSession } from '@/lib/session';
+import { jsonResponse } from '@/lib/api';
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } },
 ): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
+
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
 
@@ -27,10 +25,11 @@ export async function GET(
        t.parsed_content -> sp.sentence_index ->> 'raw' AS sentence_raw
      FROM sentence_patterns sp
      JOIN texts t ON t.id = sp.text_id
+     JOIN grammar_patterns gp ON gp.id = sp.grammar_pattern_id
      WHERE sp.grammar_pattern_id = $1
-       AND sp.grammar_pattern_id IS NOT NULL
+       AND gp.user_id = $2
      ORDER BY t.title ASC, sp.sentence_index ASC`,
-    [id],
+    [id, user.id],
   );
 
   return jsonResponse({ sentences: result.rows });

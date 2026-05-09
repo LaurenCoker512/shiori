@@ -1,13 +1,10 @@
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
 import { createSession } from '@/lib/session';
+import { jsonResponse as json } from '@/lib/api';
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Prevents timing-based email enumeration: bcrypt.compare always runs regardless of whether the user exists
+const DUMMY_HASH = '$2b$12$KIXlJmKdqCLkJnQGJqQ5.eM3BRXJ7g7UPB4IJZn5h.yCWeMkHfTe6';
 
 export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as { email?: unknown; password?: unknown };
@@ -22,9 +19,10 @@ export async function POST(request: Request): Promise<Response> {
   );
 
   const user = result.rows[0];
-  const validPassword = user !== undefined && await bcrypt.compare(body.password, user.password_hash);
+  const hashToCompare = user?.password_hash ?? DUMMY_HASH;
+  const passwordMatch = await bcrypt.compare(body.password, hashToCompare);
 
-  if (!validPassword) {
+  if (user === undefined || !passwordMatch) {
     return json({ error: 'Invalid email or password' }, 401);
   }
 
