@@ -137,6 +137,11 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     <div
       style={{ '--reader-jp-font': jpFontFamily, '--reader-font-size': `${fontSize}px` } as React.CSSProperties}
     >
+      {/* Grammar hint — scrolls with text, always visible until user scrolls past */}
+      <p className="font-en text-[11px] italic mb-2" style={{ color: 'var(--yg-ink-muted)' }}>
+        Click any sentence to analyze its grammar
+      </p>
+
       {/*
         Buttons are sticky and rendered first. The negative bottom margin (-mb-11)
         collapses their space so the legend div below starts at the same y position,
@@ -223,9 +228,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
             showFurigana={showFurigana}
             onWordClick={handleWordClick}
             onSentenceClick={handleSentenceClick}
-            grammarPhase={activeGrammar?.sentenceIndex === sentence.sentence_index ? activeGrammar.phase : null}
-            onGrammarConfirm={handleGrammarConfirm}
-            onGrammarCancel={() => setActiveGrammar(null)}
+            isActiveGrammarSentence={activeGrammar?.sentenceIndex === sentence.sentence_index}
           />
         ))}
       </div>
@@ -247,6 +250,48 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           onStatusUpdate={handleStatusUpdate}
           onFuriganaEdit={handleFuriganaEdit}
         />
+      )}
+
+      {activeGrammar?.phase === 'prompt' && (
+        <div
+          role="dialog"
+          aria-label="Grammar analysis prompt"
+          className="fixed z-40"
+          style={{
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'min(460px, calc(100vw - 32px))',
+            background: 'var(--yg-paper-hi)',
+            border: '1px solid var(--yg-rule)',
+            borderRadius: 16,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.10)',
+            animation: 'yg-slide-up 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
+            padding: '14px 20px',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="font-en text-[13px] flex-1" style={{ color: 'var(--yg-ink-soft)' }}>
+              Analyze grammar for this sentence?
+            </span>
+            <button
+              type="button"
+              className="font-en text-[12px] font-semibold px-4 py-1.5 rounded-full"
+              style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)', border: 'none', cursor: 'pointer' }}
+              onClick={handleGrammarConfirm}
+            >
+              Analyze
+            </button>
+            <button
+              type="button"
+              className="font-en text-[12px] px-4 py-1.5 rounded-full border"
+              style={{ color: 'var(--yg-ink-soft)', borderColor: 'var(--yg-rule)', background: 'transparent', cursor: 'pointer' }}
+              onClick={() => setActiveGrammar(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {activeGrammar?.phase === 'showing' && (

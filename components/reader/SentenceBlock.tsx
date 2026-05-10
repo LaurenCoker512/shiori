@@ -21,9 +21,7 @@ interface SentenceBlockProps {
   showFurigana: boolean;
   onWordClick?: (word: Word, surface: string, furigana: string, anchor: DOMRect) => void;
   onSentenceClick?: (sentenceIndex: number) => void;
-  grammarPhase?: 'prompt' | 'showing' | null;
-  onGrammarConfirm?: () => void;
-  onGrammarCancel?: () => void;
+  isActiveGrammarSentence?: boolean;
 }
 
 export function SentenceBlock({
@@ -33,9 +31,7 @@ export function SentenceBlock({
   showFurigana,
   onWordClick,
   onSentenceClick,
-  grammarPhase,
-  onGrammarConfirm,
-  onGrammarCancel,
+  isActiveGrammarSentence,
 }: SentenceBlockProps) {
   const tokens = sentence.tokens.map((token, i) => (
     <WordToken
@@ -60,7 +56,7 @@ export function SentenceBlock({
 
   function handleClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-word]') !== null) return;
-    if (grammarPhase === 'showing' || grammarPhase === 'prompt') return;
+    if (isActiveGrammarSentence === true) return;
     onSentenceClick?.(sentence.sentence_index);
   }
 
@@ -71,25 +67,6 @@ export function SentenceBlock({
       onClick={handleClick}
     >
       {tokens}
-      {grammarPhase === 'prompt' && (
-        <span className="block mt-1.5 font-en text-xs" style={{ color: 'var(--yg-ink-soft)' }}>
-          Analyze grammar for this sentence?
-          <button
-            className="ml-2 font-en text-xs"
-            style={{ color: 'var(--yg-bamboo-dark)', background: 'none', border: 'none', cursor: 'pointer' }}
-            onClick={e => { e.stopPropagation(); onGrammarConfirm?.(); }}
-          >
-            Analyze
-          </button>
-          <button
-            className="ml-2 font-en text-xs"
-            style={{ color: 'var(--yg-ink-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-            onClick={e => { e.stopPropagation(); onGrammarCancel?.(); }}
-          >
-            Cancel
-          </button>
-        </span>
-      )}
     </p>
   );
 }

@@ -55,7 +55,7 @@ export function GrammarTooltip({
         border: '1px solid var(--yg-rule)',
         borderRadius: 16,
         boxShadow: '0 12px 40px rgba(0,0,0,0.10)',
-        animation: 'yg-slide-up 0.15s ease',
+        animation: 'yg-slide-up 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
     >
       <div className="flex justify-between items-center px-5 pt-4 pb-3 border-b" style={{ borderColor: 'var(--yg-rule)' }}>
