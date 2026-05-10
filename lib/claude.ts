@@ -58,7 +58,7 @@ async function callModel(config: LLMConfig, prompt: string, maxTokens: number, s
   return stripThinkTags(text);
 }
 
-const TOKENIZE_CHUNK_SIZE = 1200;
+const TOKENIZE_CHUNK_SIZE = 400;
 
 function splitIntoChunks(text: string): string[] {
   if (text.length <= TOKENIZE_CHUNK_SIZE) return [text];
@@ -170,14 +170,14 @@ function normalizeSentences(parsed: unknown): CompactToken[][] {
   return [parsed as CompactToken[]];
 }
 
-async function tokenizeChunk(config: LLMConfig, chunk: string, signal?: AbortSignal): Promise<ParsedContent> {
+async function tokenizeChunk(config: LLMConfig, chunk: string, chunkLabel: string, signal?: AbortSignal): Promise<ParsedContent> {
   const raw = await callModel(config, `You are a Japanese NLP tokenizer. Tokenize the following Japanese text into sentences and tokens.
 
 Return ONLY a valid JSON array of sentences — no prose, no markdown, no code fences, no wrapper object.
 Each sentence is itself an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
 - surface_reading: hiragana reading of the surface form as it appears in the text
 - dict_reading: hiragana reading of the dictionary_form (the base/plain form)
-- is_content_word: 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace
+- is_content_word: 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script words (e.g. DNA, 8, ***, 1960)
 
 Output shape (array of sentences, each sentence is an array of token tuples):
 [
@@ -193,15 +193,24 @@ Rules:
 Text to tokenize:
 ${chunk}`, 8192, signal);
 
-  console.log(`[tokenize] chunk=${chunk.length} chars, model=${config.model}, response=${raw.length} chars`);
   let sentences: CompactToken[][];
   try {
     const parsed: unknown = JSON.parse(extractJson(raw, '['));
     sentences = normalizeSentences(parsed);
   } catch (err) {
-    console.error(`[tokenize] parse error. raw (first 500 chars): ${raw.slice(0, 500)}`);
+    console.error(`[tokenize] ${chunkLabel} parse error. raw (first 500 chars): ${raw.slice(0, 500)}`);
     throw err;
   }
+
+  const coveredNonWhitespace = sentences.flat().reduce((sum, t) => sum + t[0].replace(/\s/g, '').length, 0);
+  const chunkNonWhitespace = chunk.replace(/\s/g, '').length;
+  if (coveredNonWhitespace < chunkNonWhitespace * 0.9) {
+    throw new Error(
+      `[${chunkLabel}] Tokenizer only covered ${coveredNonWhitespace} of ${chunkNonWhitespace} non-whitespace input characters — model likely self-truncated`,
+    );
+  }
+
+  console.log(`[tokenize] ${chunkLabel} ok: ${chunk.length} chars in, ${raw.length} chars response, ${coveredNonWhitespace}/${chunkNonWhitespace} non-ws covered`);
 
   return sentences.map((tokens, index) => ({
     sentence_index: index,
@@ -220,14 +229,24 @@ export async function tokenizeText(config: LLMConfig, cleanedText: string, signa
   const chunks = splitIntoChunks(cleanedText);
 
   const chunkResults = await Promise.all(
-    chunks.map((chunk, i) =>
-      tokenizeChunk(config, chunk, signal).then(result => {
-        if (result.length === 0) {
-          throw new Error(`Tokenizer returned no sentences for chunk ${i + 1} of ${chunks.length} (${chunk.length} chars). The model may have failed to parse this section.`);
+    chunks.map(async (chunk, i) => {
+      const chunkLabel = `chunk ${i + 1}/${chunks.length}`;
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const result = await tokenizeChunk(config, chunk, chunkLabel, signal);
+          if (result.length === 0) {
+            throw new Error(`[${chunkLabel}] Tokenizer returned no sentences (${chunk.length} chars). The model may have failed to parse this section.`);
+          }
+          return result;
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') throw err;
+          lastError = err;
+          if (attempt < 2) console.warn(`[tokenize] ${chunkLabel} attempt ${attempt} failed, retrying: ${err instanceof Error ? err.message : err}`);
         }
-        return result;
-      })
-    )
+      }
+      throw lastError;
+    })
   );
 
   let sentenceOffset = 0;

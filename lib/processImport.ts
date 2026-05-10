@@ -34,7 +34,10 @@ export async function processImport(
       [JSON.stringify(parsedContent), 'ready', textId],
     );
 
-    const contentWords = parsedContent.flatMap(s => s.tokens).filter(t => t.is_content_word);
+    const UNIVERSAL_TOKEN = /^[\d\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~a-zA-Z]+$/;
+    const contentWords = parsedContent
+      .flatMap(s => s.tokens)
+      .filter(t => t.is_content_word && !UNIVERSAL_TOKEN.test(t.dictionary_form));
     if (contentWords.length > 0) {
       const forms = contentWords.map(t => t.dictionary_form);
       const readings = contentWords.map(t => t.dict_reading);
