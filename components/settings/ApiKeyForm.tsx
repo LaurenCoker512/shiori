@@ -3,9 +3,8 @@
 import { useState } from "react";
 
 const SUPPORTED_MODELS: { id: string; label: string }[] = [
-  { id: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash" },
-  { id: "inclusionai/ling-2.6-flash", label: "Ling 2.6 Flash" },
   { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
+  { id: "google/gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
 ];
 
 interface ApiKeyFormProps {
