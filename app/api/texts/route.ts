@@ -1,5 +1,6 @@
 export const maxDuration = 300;
 
+import { waitUntil } from '@vercel/functions';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { buildLLMConfig } from '@/lib/claude';
@@ -37,8 +38,8 @@ export async function POST(request: Request): Promise<Response> {
   );
   const textId = textResult.rows[0].id;
 
-  // Fire-and-forget — tokenization continues after this response returns
-  void processImport(textId, user.id, content, llmConfig);
+  // waitUntil keeps the serverless function alive after the response is sent
+  waitUntil(processImport(textId, user.id, content, llmConfig));
 
   return jsonResponse({ id: textId }, 202);
 }
