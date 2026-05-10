@@ -7,6 +7,12 @@ import { Spinner } from '@/components/ui/Spinner';
 
 const PAGE_SIZE = 21;
 
+const STATUS_OPTIONS: { status: WordStatus; label: string }[] = [
+  { status: 'unseen', label: 'New' },
+  { status: 'seen',   label: 'Seen' },
+  { status: 'known',  label: 'Known' },
+];
+
 const STATUS_FILTERS: { value: '' | WordStatus; label: string }[] = [
   { value: '',        label: 'All'    },
   { value: 'unseen',  label: 'New'    },
@@ -40,6 +46,7 @@ export function WordBrowser() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
   const [fetchingTranslationIds, setFetchingTranslationIds] = useState<Set<number>>(new Set());
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const prevSearchRef = useRef('');
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -92,6 +99,18 @@ export function WordBrowser() {
         return next;
       });
     }
+  }
+
+  async function updateStatus(word: Word, newStatus: WordStatus) {
+    setOpenMenuId(null);
+    setWords(prev => prev.map(w => w.id === word.id ? { ...w, status: newStatus } : w));
+    await fetch(`/api/words/${word.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    }).catch(() => {
+      setWords(prev => prev.map(w => w.id === word.id ? { ...w, status: word.status } : w));
+    });
   }
 
   async function saveTranslation(word: Word) {
@@ -202,29 +221,84 @@ export function WordBrowser() {
                 </div>
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1">
+                  <div className="relative flex items-center gap-1.5 mb-1">
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
                       style={{ background: dot, opacity: word.status === 'unseen' ? 0.45 : 1 }}
                       aria-hidden="true"
                     />
                     <span className="font-en text-[10px] tracking-[0.6px] uppercase font-semibold" style={{ color: 'var(--yg-ink-muted)' }}>
                       {word.status} · {word.jlpt_level ?? '—'}
                     </span>
+                    <button
+                      type="button"
+                      aria-label={`Change status for ${word.dictionary_form}`}
+                      aria-expanded={openMenuId === word.id}
+                      onClick={() => setOpenMenuId(prev => prev === word.id ? null : word.id)}
+                      className="ml-auto font-en text-[11px] px-1 rounded leading-none transition-colors"
+                      style={{
+                        color: 'var(--yg-ink-muted)',
+                        background: openMenuId === word.id ? 'var(--yg-rule-soft)' : 'transparent',
+                        letterSpacing: '2px',
+                      }}
+                    >
+                      · · ·
+                    </button>
+                    {openMenuId === word.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} aria-hidden="true" />
+                        <div
+                          role="menu"
+                          aria-label="Change word status"
+                          className="absolute right-0 top-full mt-1 w-36 rounded-xl overflow-hidden z-20"
+                          style={{
+                            background: 'var(--yg-paper-hi)',
+                            border: '1px solid var(--yg-rule)',
+                            boxShadow: '0 8px 28px rgba(0,0,0,0.10)',
+                          }}
+                        >
+                          {STATUS_OPTIONS.map(({ status: s, label }) => (
+                            <button
+                              key={s}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => { void updateStatus(word, s); }}
+                              className="w-full text-left min-h-10 px-4 py-2 font-en text-[13px] flex items-center gap-2 hover:bg-[rgba(44,42,40,0.04)]"
+                              style={{ color: word.status === s ? 'var(--yg-ink-muted)' : 'var(--yg-ink)' }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ background: statusDotColor(s), opacity: s === 'unseen' ? 0.45 : 1 }}
+                                aria-hidden="true"
+                              />
+                              {label}
+                              {word.status === s && (
+                                <span className="ml-auto font-en text-[10px]" style={{ color: 'var(--yg-ink-muted)' }} aria-label="current status">✓</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="font-en text-[13px] leading-[1.4]" style={{ color: 'var(--yg-ink)' }}>
                     {editingId === word.id ? (
-                      <input
-                        type="text"
-                        aria-label={`Edit translation for ${word.dictionary_form}`}
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onBlur={() => { void saveTranslation(word); }}
-                        onKeyDown={e => { if (e.key === 'Enter') void saveTranslation(word); }}
-                        autoFocus
-                        className="border rounded px-1 text-sm w-full"
-                        style={{ borderColor: 'var(--yg-rule)', background: 'var(--yg-paper)', color: 'var(--yg-ink)' }}
-                      />
+                      <div className="flex flex-col gap-1">
+                        {claudeGloss !== '' && (
+                          <span className="block text-xs" style={{ color: 'var(--yg-ink-muted)' }}>{claudeGloss}</span>
+                        )}
+                        <input
+                          type="text"
+                          aria-label={`Edit translation for ${word.dictionary_form}`}
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={() => { void saveTranslation(word); }}
+                          onKeyDown={e => { if (e.key === 'Enter') void saveTranslation(word); }}
+                          autoFocus
+                          className="border rounded px-1 text-sm w-full"
+                          style={{ borderColor: 'var(--yg-rule)', background: 'var(--yg-paper)', color: 'var(--yg-ink)' }}
+                        />
+                      </div>
                     ) : (
                       <div className="flex items-start gap-1">
                         <div className="flex-1 min-w-0">
