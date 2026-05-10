@@ -58,7 +58,7 @@ async function callModel(config: LLMConfig, prompt: string, maxTokens: number, s
   return stripThinkTags(text);
 }
 
-const TOKENIZE_CHUNK_SIZE = 600;
+const TOKENIZE_CHUNK_SIZE = 1200;
 
 function splitIntoChunks(text: string): string[] {
   if (text.length <= TOKENIZE_CHUNK_SIZE) return [text];
@@ -218,15 +218,24 @@ ${chunk}`, 8192, signal);
 
 export async function tokenizeText(config: LLMConfig, cleanedText: string, signal?: AbortSignal): Promise<ParsedContent> {
   const chunks = splitIntoChunks(cleanedText);
-  const results: ParsedContent = [];
-  let sentenceOffset = 0;
 
-  for (const chunk of chunks) {
-    const chunkResult = await tokenizeChunk(config, chunk, signal);
+  const chunkResults = await Promise.all(
+    chunks.map((chunk, i) =>
+      tokenizeChunk(config, chunk, signal).then(result => {
+        if (result.length === 0) {
+          throw new Error(`Tokenizer returned no sentences for chunk ${i + 1} of ${chunks.length} (${chunk.length} chars). The model may have failed to parse this section.`);
+        }
+        return result;
+      })
+    )
+  );
+
+  let sentenceOffset = 0;
+  const results: ParsedContent = [];
+  for (const chunkResult of chunkResults) {
     results.push(...chunkResult.map(s => ({ ...s, sentence_index: s.sentence_index + sentenceOffset })));
     sentenceOffset += chunkResult.length;
   }
-
   return results;
 }
 
