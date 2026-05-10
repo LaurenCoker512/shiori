@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Word, WordStatus, JlptLevel } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
+import { useKnownWordCount } from '@/components/ui/KnownWordCountContext';
 
 const PAGE_SIZE = 21;
 
@@ -33,6 +34,7 @@ function statusBg(status: WordStatus): string {
 }
 
 export function WordBrowser() {
+  const { adjustKnownWordCount } = useKnownWordCount();
   const [words, setWords] = useState<Word[]>([]);
   const [total, setTotal] = useState(0);
   const [knownCount, setKnownCount] = useState(0);
@@ -104,12 +106,16 @@ export function WordBrowser() {
   async function updateStatus(word: Word, newStatus: WordStatus) {
     setOpenMenuId(null);
     setWords(prev => prev.map(w => w.id === word.id ? { ...w, status: newStatus } : w));
+    if (newStatus === 'known' && word.status !== 'known') adjustKnownWordCount(1);
+    else if (word.status === 'known' && newStatus !== 'known') adjustKnownWordCount(-1);
     await fetch(`/api/words/${word.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     }).catch(() => {
       setWords(prev => prev.map(w => w.id === word.id ? { ...w, status: word.status } : w));
+      if (newStatus === 'known' && word.status !== 'known') adjustKnownWordCount(-1);
+      else if (word.status === 'known' && newStatus !== 'known') adjustKnownWordCount(1);
     });
   }
 

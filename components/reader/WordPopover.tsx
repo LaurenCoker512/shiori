@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Word } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
+import { useKnownWordCount } from '@/components/ui/KnownWordCountContext';
 
 interface WordPopoverProps {
   word: Word;
@@ -22,6 +23,7 @@ const STATUS_OPTS = [
 ];
 
 export function WordPopover({ word, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
+  const { adjustKnownWordCount } = useKnownWordCount();
   const [loadedTranslations, setLoadedTranslations] = useState<string[] | null>(null);
   const [translationLoading, setTranslationLoading] = useState(
     word.translation === null && word.user_translation === null,
@@ -70,6 +72,8 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
         body: JSON.stringify({ status: newStatus }),
       });
       const updated: Word = await res.json();
+      if (newStatus === 'known' && word.status !== 'known') adjustKnownWordCount(1);
+      else if (word.status === 'known' && newStatus !== 'known') adjustKnownWordCount(-1);
       onStatusUpdate(updated);
     } finally {
       setMarkingStatus(false);

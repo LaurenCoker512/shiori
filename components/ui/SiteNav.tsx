@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUserName } from '@/components/ui/UserNameContext';
+import { useKnownWordCount } from '@/components/ui/KnownWordCountContext';
 
 function BookmarkRibbon({ size = 22 }: { size?: number }) {
   return (
@@ -37,6 +38,7 @@ export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { userName, setUserName } = useUserName();
+  const { knownWordCount } = useKnownWordCount();
   const [editingName, setEditingName] = useState(false);
   const [editValue, setEditValue] = useState(userName);
   const [isDark, setIsDark] = useState(false);
@@ -196,6 +198,18 @@ export function SiteNav() {
             {userName}
           </button>
         )}
+        <div
+          aria-label={`${knownWordCount} known words`}
+          title={`${knownWordCount} known words`}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full shrink-0"
+          style={{
+            background: 'var(--yg-known)',
+            color: 'var(--yg-bamboo-dark)',
+          }}
+        >
+          <span className="font-en text-[12px] font-semibold tabular-nums">{knownWordCount.toLocaleString()}</span>
+          <span className="font-jp text-[11px] opacity-80">知</span>
+        </div>
         <button
           type="button"
           onClick={toggleDark}

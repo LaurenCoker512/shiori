@@ -177,13 +177,14 @@ Return ONLY a valid JSON array of sentences — no prose, no markdown, no code f
 Each sentence is itself an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
 - surface_reading: hiragana reading of the surface form as it appears in the text
 - dict_reading: hiragana reading of the dictionary_form (the base/plain form)
-- is_content_word: 1 for nouns/verbs/adjectives/adverbs/fixed expressions, 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script words (e.g. DNA, 8, ***, 1960)
+- is_content_word: MUST be exactly the integer 1 or 0 — no other value, no text, no comments. Use 1 for nouns/verbs/adjectives/adverbs/fixed expressions/proper nouns; 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script words (e.g. DNA, 8, ***, 1960)
 
 Output shape (array of sentences, each sentence is an array of token tuples):
 [
   [["surface1","dict1","reading1","dictreading1",1], ["surface2","dict2","reading2","dictreading2",0]],
-  [["surface3","dict3","reading3","dictreading3",1], ["surface4","dict4","reading4","dictreading4",0]]
+  [["YuzuruName","YuzuruName","ゆずる","ゆずる",1], ["particle","particle","の","の",0]]
 ]
+The fifth element is always 1 or 0. Never write anything else there — no floats, no negative numbers, no words.
 
 Rules:
 - Split on sentence-ending punctuation (。！？) and newlines between paragraphs.
@@ -195,18 +196,31 @@ ${chunk}`, 8192, signal);
 
   let sentences: CompactToken[][];
   try {
-    const parsed: unknown = JSON.parse(extractJson(raw, '['));
+    // The model occasionally emits a non-numeric value where the is_content_word 0|1 flag
+    // should be (e.g. "Lock", "-Classified as content word due to name"). Match any comma
+    // followed by an optional minus and a letter — which can never be valid JSON — and
+    // consume through to the next delimiter, replacing with 1.
+    const sanitized = raw.replace(/,-?[A-Za-z_][^,\]]*([\],])/g, (_m, delim) => `,1${delim}`);
+    const parsed: unknown = JSON.parse(extractJson(sanitized, '['));
     sentences = normalizeSentences(parsed);
   } catch (err) {
     console.error(`[tokenize] ${chunkLabel} parse error. raw (first 500 chars): ${raw.slice(0, 500)}`);
     throw err;
   }
 
-  const coveredNonWhitespace = sentences.flat().reduce((sum, t) => sum + t[0].replace(/\s/g, '').length, 0);
+  const allTokens = sentences.flat();
+  const coveredNonWhitespace = allTokens.reduce((sum, t) => sum + t[0].replace(/\s/g, '').length, 0);
   const chunkNonWhitespace = chunk.replace(/\s/g, '').length;
   if (coveredNonWhitespace < chunkNonWhitespace * 0.9) {
     throw new Error(
       `[${chunkLabel}] Tokenizer only covered ${coveredNonWhitespace} of ${chunkNonWhitespace} non-whitespace input characters — model likely self-truncated`,
+    );
+  }
+
+  const contentWordCount = allTokens.filter(t => t[4] === 1).length;
+  if (chunkNonWhitespace > 20 && contentWordCount === 0) {
+    throw new Error(
+      `[${chunkLabel}] Tokenizer returned 0 content words for ${chunkNonWhitespace} non-whitespace input chars — model likely set all is_content_word to 0`,
     );
   }
 
