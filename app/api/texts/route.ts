@@ -1,3 +1,5 @@
+export const maxDuration = 300;
+
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { buildLLMConfig } from '@/lib/claude';
