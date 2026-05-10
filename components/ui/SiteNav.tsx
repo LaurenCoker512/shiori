@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import type { SessionUser } from '@/lib/session';
 import { useUserName } from '@/components/ui/UserNameContext';
 
 function BookmarkRibbon({ size = 22 }: { size?: number }) {
@@ -34,7 +33,7 @@ const NAV_ITEMS = [
   { id: 'import',     href: '/import',     label: 'Import',     jp: '取り込み', match: (p: string) => p === '/import' },
 ];
 
-export function SiteNav({ user }: { user: SessionUser }) {
+export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { userName, setUserName } = useUserName();

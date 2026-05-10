@@ -38,7 +38,7 @@ export function GrammarTooltip({
         setError(true);
         setLoading(false);
       });
-  }, [textId, sentenceIndex]);
+  }, [textId, sentenceIndex, hasInitialData, onPatternsLoaded]);
 
   return (
     <div

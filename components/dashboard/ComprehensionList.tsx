@@ -36,7 +36,7 @@ function TagPills({ tags }: { tags: Tag[] }) {
       if (els[i].getBoundingClientRect().right > containerRight + 1) { count = i; break; }
     }
     setVisibleCount(count);
-  });
+  }, [tags, visibleCount]);
 
   const displayCount = visibleCount ?? tags.length;
   const overflowCount = tags.length - displayCount;

@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session';
 import type { GrammarPattern } from '@/lib/types';
 import { jsonResponse } from '@/lib/api';
 
-export async function GET(_request: Request): Promise<Response> {
+export async function GET(): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
 

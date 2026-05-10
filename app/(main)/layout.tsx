@@ -11,7 +11,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <UserNameProvider initialName={user.name}>
       <ImportToastProvider>
-        <SiteNav user={user} />
+        <SiteNav />
         <div className="relative z-10 pt-16">
           {children}
         </div>

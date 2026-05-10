@@ -6,6 +6,8 @@ import { SentenceBlock } from './SentenceBlock';
 import { WordPopover } from './WordPopover';
 import { GrammarTooltip } from './GrammarTooltip';
 
+const FONT_SIZES = [15, 18, 21, 24];
+
 interface ReaderContentProps {
   content: ParsedContent;
   wordStatusMap: Record<string, Word>;
@@ -34,8 +36,6 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     }
     return map;
   });
-
-  const FONT_SIZES = [15, 18, 21, 24];
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');

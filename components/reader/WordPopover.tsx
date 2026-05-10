@@ -21,7 +21,7 @@ const STATUS_OPTS = [
   { id: 'known'  as const, label: 'Known', jp: '既習' },
 ];
 
-export function WordPopover({ word, anchorRect, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
+export function WordPopover({ word, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
   const [loadedTranslations, setLoadedTranslations] = useState<string[] | null>(null);
   const [translationLoading, setTranslationLoading] = useState(
     word.translation === null && word.user_translation === null,
