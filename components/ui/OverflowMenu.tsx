@@ -33,8 +33,10 @@ export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 
         ⋮
       </button>
       {open && (
-        <div
-          role="menu"
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div
+            role="menu"
           aria-label="Text options"
           className="absolute right-0 top-full mt-1.5 w-40 rounded-xl overflow-hidden z-20"
           style={{
@@ -47,7 +49,7 @@ export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 
             <button
               type="button"
               role="menuitem"
-              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center transition-colors hover:bg-[var(--yg-rule)] focus-visible:outline-none focus-visible:bg-[var(--yg-rule)]"
               style={{ color: 'var(--yg-ink)' }}
               onClick={() => { setOpen(false); onTags(); }}
             >
@@ -58,7 +60,7 @@ export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 
             <button
               type="button"
               role="menuitem"
-              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+              className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center transition-colors hover:bg-[var(--yg-rule)] focus-visible:outline-none focus-visible:bg-[var(--yg-rule)]"
               style={{ color: 'var(--yg-ink)' }}
               onClick={() => { setOpen(false); onReparse(); }}
             >
@@ -68,7 +70,7 @@ export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center transition-colors hover:bg-[var(--yg-rule)] focus-visible:outline-none focus-visible:bg-[var(--yg-rule)]"
             style={{ color: 'var(--yg-ink)' }}
             onClick={() => { setOpen(false); onRename(); }}
           >
@@ -78,13 +80,14 @@ export function OverflowMenu({ onRename, onDelete, onReparse, onTags, variant = 
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center hover:bg-[rgba(44,42,40,0.04)]"
+            className="w-full text-left min-h-11 px-4 py-2.5 font-en text-[13px] flex items-center transition-colors hover:bg-[var(--yg-rule)] focus-visible:outline-none focus-visible:bg-[var(--yg-rule)]"
             style={{ color: 'var(--yg-coral-dark)' }}
             onClick={() => { setOpen(false); onDelete(); }}
           >
             Delete
           </button>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
