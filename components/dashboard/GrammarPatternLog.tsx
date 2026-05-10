@@ -158,9 +158,12 @@ export function GrammarPatternLog({ patterns }: GrammarPatternLogProps) {
 
                       {isExpanded && (
                         <div
-                          className="px-[18px] pb-4 pt-1 border-t"
+                          className="px-[18px] pb-4 pt-3 border-t"
                           style={{ borderColor: 'var(--yg-rule)' }}
                         >
+                          <p className="font-en text-[13px] leading-relaxed mb-4" style={{ color: 'var(--yg-ink-soft)' }}>
+                            {pattern.description_en}
+                          </p>
                           {isLoading ? (
                             <Spinner />
                           ) : (
