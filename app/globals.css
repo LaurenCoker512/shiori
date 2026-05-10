@@ -29,6 +29,11 @@
   --yg-card-indigo-lo: #34465c;
   --yg-card-gold-hi:   #b89968;
   --yg-card-gold-lo:   #7a614a;
+  /* Tag pill text — independent from gradient/error uses of the accent darks */
+  --yg-tag-coral-text:  #9d5a6a;
+  --yg-tag-bamboo-text: #5e7c61;
+  --yg-tag-indigo-text: #34465c;
+  --yg-tag-gold-text:   #7a614a;
 }
 
 /* Yugure dark — moonlit sakura at night (Hasui woodblock vibe) */
@@ -59,6 +64,10 @@ html.dark {
   --yg-card-indigo-lo: #253349;
   --yg-card-gold-hi:   #7a614a;
   --yg-card-gold-lo:   #4a3a2e;
+  --yg-tag-coral-text:  #d4879a;
+  --yg-tag-bamboo-text: #85ae88;
+  --yg-tag-indigo-text: #7d99b8;
+  --yg-tag-gold-text:   #c4a06e;
 }
 
 body {
