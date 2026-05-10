@@ -192,7 +192,7 @@ export function TagManager() {
             }
 
             return (
-              <div key={tag.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl group hover:bg-[rgba(44,42,40,0.03)]">
+              <div key={tag.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[rgba(44,42,40,0.03)]">
                 <span
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
@@ -204,7 +204,7 @@ export function TagManager() {
                 >
                   {tag.name}
                 </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1">
                   <button
                     type="button"
                     aria-label={`Edit tag ${tag.name}`}
