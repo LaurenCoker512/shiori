@@ -148,6 +148,21 @@ function extractJson(raw: string, open: '{' | '['): string {
 // Token tuple: [surface, dictionary_form, surface_reading, dict_reading, is_content_word (0|1)]
 type CompactToken = [string, string, string, string, 0 | 1];
 
+// Some models nest related tokens in sub-arrays within a sentence instead of keeping the
+// sentence flat. Recursively extract all 5-element tuples whose first two elements are strings.
+function flattenToTokens(arr: unknown[]): CompactToken[] {
+  const result: CompactToken[] = [];
+  for (const item of arr) {
+    if (!Array.isArray(item)) continue;
+    if (item.length === 5 && typeof item[0] === 'string' && typeof item[1] === 'string') {
+      result.push(item as CompactToken);
+    } else {
+      result.push(...flattenToTokens(item as unknown[]));
+    }
+  }
+  return result;
+}
+
 function normalizeSentences(parsed: unknown): CompactToken[][] {
   if (!Array.isArray(parsed) || parsed.length === 0) return [];
   const first = parsed[0];
@@ -156,7 +171,7 @@ function normalizeSentences(parsed: unknown): CompactToken[][] {
   if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
     return (parsed as Array<Record<string, unknown>>).map(obj => {
       const tokensKey = Object.keys(obj).find(k => Array.isArray(obj[k]));
-      return tokensKey !== undefined ? (obj[tokensKey] as CompactToken[]) : [];
+      return tokensKey !== undefined ? flattenToTokens(obj[tokensKey] as unknown[]) : [];
     });
   }
 
@@ -166,8 +181,8 @@ function normalizeSentences(parsed: unknown): CompactToken[][] {
 
   // Flat [token, token, ...] (single sentence) vs [[token,...], [token,...], ...] (multiple sentences)
   // Detect by checking whether the first element of the first element is itself an array
-  if (Array.isArray(first[0])) return parsed as CompactToken[][];
-  return [parsed as CompactToken[]];
+  if (Array.isArray(first[0])) return (parsed as unknown[][]).map(s => flattenToTokens(s));
+  return [flattenToTokens(parsed as unknown[])];
 }
 
 async function tokenizeChunk(config: LLMConfig, chunk: string, chunkLabel: string, signal?: AbortSignal): Promise<ParsedContent> {
@@ -190,6 +205,7 @@ Rules:
 - Split on sentence-ending punctuation (。！？) and newlines between paragraphs.
 - Every character in the input must appear in exactly one token's surface (first element).
 - dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
+- CRITICAL: Each sentence array must be FLAT — every element must be a token tuple. Never nest token arrays inside other arrays within a sentence. Never group tokens into sub-arrays.
 
 Text to tokenize:
 ${chunk}`, 8192, signal);
@@ -246,7 +262,7 @@ export async function tokenizeText(config: LLMConfig, cleanedText: string, signa
     chunks.map(async (chunk, i) => {
       const chunkLabel = `chunk ${i + 1}/${chunks.length}`;
       let lastError: unknown;
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           const result = await tokenizeChunk(config, chunk, chunkLabel, signal);
           if (result.length === 0) {
