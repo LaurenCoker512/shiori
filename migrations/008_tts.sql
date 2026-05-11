@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN google_tts_api_key TEXT;
+ALTER TABLE users ADD COLUMN tts_voice TEXT NOT NULL DEFAULT 'ja-JP-Neural2-B';
+ALTER TABLE users ADD COLUMN tts_speaking_rate NUMERIC(3,2) NOT NULL DEFAULT 1.0;

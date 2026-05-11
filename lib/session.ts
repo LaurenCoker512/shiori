@@ -10,6 +10,9 @@ export interface SessionUser {
   email: string;
   openrouter_api_key: string | null;
   openrouter_model: string;
+  google_tts_api_key: string | null;
+  tts_voice: string;
+  tts_speaking_rate: number;
 }
 
 export async function getSession(): Promise<SessionUser | null> {
@@ -17,7 +20,8 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!sessionId) return null;
 
   const result = await query<SessionUser>(
-    `SELECT u.id, u.name, u.email, u.openrouter_api_key, u.openrouter_model
+    `SELECT u.id, u.name, u.email, u.openrouter_api_key, u.openrouter_model,
+            u.google_tts_api_key, u.tts_voice, u.tts_speaking_rate
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > NOW()`,
