@@ -69,7 +69,7 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
     mockGetSession.mockResolvedValue({
       id: 1, name: 'Test', email: 'test@example.com',
       
-      openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6',
+      openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
     });
   });
 

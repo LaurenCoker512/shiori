@@ -20,7 +20,7 @@ const FAKE_USER: SessionUser = {
   name: 'Test User',
   email: 'test@example.com',
   openrouter_api_key: null,
-  openrouter_model: 'anthropic/claude-sonnet-4-6',
+  openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
 };
 
 function makeRequest(body: object): Request {
