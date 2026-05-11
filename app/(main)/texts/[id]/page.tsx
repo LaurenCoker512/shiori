@@ -58,6 +58,9 @@ export default async function ReaderPage({ params }: { params: { id: string } })
         wordStatusMap={wordStatusMap}
         furiganaOverrides={furiganaResult.rows}
         textId={text.id}
+        ttsEnabled={user.google_tts_api_key !== null}
+        textTitle={text.title}
+        ttsSpeakingRate={user.tts_speaking_rate}
       />
     </main>
   );

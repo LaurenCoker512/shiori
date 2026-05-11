@@ -5,6 +5,8 @@ import type { ParsedContent, Word, FuriganaOverride, GrammarPattern } from '@/li
 import { SentenceBlock } from './SentenceBlock';
 import { WordPopover } from './WordPopover';
 import { GrammarTooltip } from './GrammarTooltip';
+import { TTSPlayerBar } from './TTSPlayerBar';
+import { useTTSPlayer } from '@/hooks/useTTSPlayer';
 
 const FONT_SIZES = [15, 18, 21, 24];
 
@@ -13,9 +15,12 @@ interface ReaderContentProps {
   wordStatusMap: Record<string, Word>;
   furiganaOverrides: FuriganaOverride[];
   textId: number;
+  ttsEnabled: boolean;
+  textTitle: string;
+  ttsSpeakingRate: number;
 }
 
-export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId }: ReaderContentProps) {
+export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId, ttsEnabled, textTitle, ttsSpeakingRate }: ReaderContentProps) {
   const [showFurigana, setShowFurigana] = useState(true);
   const [fontFamily, setFontFamily] = useState<'serif' | 'sans'>('serif');
   const [fontSize, setFontSize] = useState(18);
@@ -36,6 +41,8 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     }
     return map;
   });
+
+  const tts = useTTSPlayer({ textId, sentences: content, textTitle, ttsEnabled });
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');
@@ -212,7 +219,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
 
       {/* Text body */}
       <div
-        className="leading-[2.6] tracking-[0.02em]"
+        className={`leading-[2.6] tracking-[0.02em]${ttsEnabled ? ' pb-24' : ''}`}
         style={{
           color: 'var(--yg-ink)',
           fontFamily: 'var(--reader-jp-font)',
@@ -229,6 +236,9 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
             onWordClick={handleWordClick}
             onSentenceClick={handleSentenceClick}
             isActiveGrammarSentence={activeGrammar?.sentenceIndex === sentence.sentence_index}
+            isActiveTTS={tts.activeSentenceIndex === sentence.sentence_index}
+            onPlaySentence={() => tts.playFrom(sentence.sentence_index)}
+            ttsEnabled={ttsEnabled}
           />
         ))}
       </div>
@@ -301,6 +311,20 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           initialPatterns={grammarCache.get(activeGrammar.sentenceIndex) ?? null}
           onPatternsLoaded={patterns => handlePatternsLoaded(activeGrammar.sentenceIndex, patterns)}
           onClose={() => setActiveGrammar(null)}
+        />
+      )}
+
+      {ttsEnabled && (
+        <TTSPlayerBar
+          isPlaying={tts.isPlaying}
+          activeSentenceIndex={tts.activeSentenceIndex}
+          sentenceCount={content.length}
+          speakingRate={ttsSpeakingRate}
+          onPlay={tts.play}
+          onPause={tts.pause}
+          onPrev={tts.goToPrev}
+          onNext={tts.goToNext}
+          onDownload={tts.downloadAll}
         />
       )}
     </div>

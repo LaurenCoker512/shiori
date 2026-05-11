@@ -5,6 +5,16 @@ import { WordToken } from './WordToken';
 
 const HEADING_FONT = "var(--reader-jp-font, var(--font-zen-mincho)), 'Yu Mincho', serif";
 
+function SpeakerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M3 5.5H1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2l4 3V2.5L3 5.5z" />
+      <path d="M11.5 8a3.5 3.5 0 0 0-2-3.15v6.3A3.5 3.5 0 0 0 11.5 8z" />
+      <path d="M13.5 3.5a7 7 0 0 1 0 9" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const HEADING_STYLES: Record<string, React.CSSProperties> = {
   h1: { fontSize: '2rem',  fontWeight: 500, margin: '1.2em 0 0.6em', letterSpacing: '-0.3px', fontFamily: HEADING_FONT },
   h2: { fontSize: '1.6rem', fontWeight: 500, margin: '1.1em 0 0.5em', fontFamily: HEADING_FONT },
@@ -22,6 +32,9 @@ interface SentenceBlockProps {
   onWordClick?: (word: Word, surface: string, furigana: string, anchor: DOMRect) => void;
   onSentenceClick?: (sentenceIndex: number) => void;
   isActiveGrammarSentence?: boolean;
+  isActiveTTS?: boolean;
+  onPlaySentence?: () => void;
+  ttsEnabled?: boolean;
 }
 
 export function SentenceBlock({
@@ -32,6 +45,9 @@ export function SentenceBlock({
   onWordClick,
   onSentenceClick,
   isActiveGrammarSentence,
+  isActiveTTS,
+  onPlaySentence,
+  ttsEnabled,
 }: SentenceBlockProps) {
   const tokens = sentence.tokens.map((token, i) => (
     <WordToken
@@ -61,12 +77,28 @@ export function SentenceBlock({
   }
 
   return (
-    <p
-      className="my-[0.7em] cursor-default"
-      style={{ textIndent: '1em' }}
-      onClick={handleClick}
+    <div
+      className="group relative my-[0.7em]"
+      style={isActiveTTS === true ? { borderLeft: '2px solid var(--yg-known)', paddingLeft: '0.35em' } : undefined}
     >
-      {tokens}
-    </p>
+      {ttsEnabled === true && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onPlaySentence?.(); }}
+          className={`absolute top-[0.35em] left-[-1.8em] transition-opacity ${isActiveTTS === true ? 'opacity-70' : 'opacity-0 group-hover:opacity-50 focus:opacity-70'} hover:!opacity-100`}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--yg-ink-soft)', padding: '2px 4px', lineHeight: 1 }}
+          aria-label={`Play from sentence ${sentence.sentence_index + 1}`}
+        >
+          <SpeakerIcon />
+        </button>
+      )}
+      <p
+        className="cursor-default"
+        style={{ textIndent: '1em' }}
+        onClick={handleClick}
+      >
+        {tokens}
+      </p>
+    </div>
   );
 }
