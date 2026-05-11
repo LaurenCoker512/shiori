@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { ApiKeyForm } from '@/components/settings/ApiKeyForm';
 import { ProfileForm } from '@/components/settings/ProfileForm';
 import { TagManager } from '@/components/settings/TagManager';
+import { TTSForm } from '@/components/settings/TTSForm';
 
 export default async function SettingsPage() {
   const user = await getSession();
@@ -39,6 +40,17 @@ export default async function SettingsPage() {
         <ApiKeyForm
           hasOpenRouterKey={user.openrouter_api_key !== null}
           openrouterModel={user.openrouter_model}
+        />
+      </div>
+
+      <div
+        className="rounded-2xl px-7 py-6 border mb-4"
+        style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}
+      >
+        <TTSForm
+          hasTTSKey={user.google_tts_api_key !== null}
+          ttsVoice={user.tts_voice}
+          ttsSpeakingRate={user.tts_speaking_rate}
         />
       </div>
 
