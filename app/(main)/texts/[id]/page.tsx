@@ -60,6 +60,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
         textId={text.id}
         ttsEnabled={user.google_tts_api_key !== null}
         textTitle={text.title}
+        ttsVoice={user.tts_voice}
         ttsSpeakingRate={user.tts_speaking_rate}
       />
     </main>

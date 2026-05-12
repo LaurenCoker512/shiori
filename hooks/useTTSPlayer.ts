@@ -9,6 +9,7 @@ export interface UseTTSPlayerOptions {
   sentences: Sentence[];
   textTitle: string;
   ttsEnabled: boolean;
+  ttsVoice: string;
 }
 
 export interface UseTTSPlayerReturn {
@@ -41,6 +42,7 @@ export function useTTSPlayer({
   sentences,
   textTitle,
   ttsEnabled,
+  ttsVoice,
 }: UseTTSPlayerOptions): UseTTSPlayerReturn {
   const cache = useRef(createIndexedDBCache());
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -80,7 +82,7 @@ export function useTTSPlayer({
   }, []);
 
   async function getAudio(sentenceIndex: number): Promise<ArrayBuffer> {
-    const key = makeSentenceCacheKey(textId, sentenceIndex);
+    const key = makeSentenceCacheKey(textId, sentenceIndex, ttsVoice);
     const cached = await cache.current.get(key);
     if (cached !== null) return cached;
     const audio = await fetchAudio(sentences[sentenceIndex].raw);

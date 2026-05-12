@@ -1,8 +1,8 @@
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 export const TTS_VOICES = [
-  { id: 'ja-JP-Neural2-B', label: 'Kenji (male, Neural2)' },
-  { id: 'ja-JP-Neural2-C', label: 'Sakura (female, Neural2)' },
+  { id: 'ja-JP-Neural2-B', label: 'Sakura (female, Neural2)' },
+  { id: 'ja-JP-Neural2-C', label: 'Kenji (male, Neural2)' },
   { id: 'ja-JP-Neural2-D', label: 'Hiroshi (male, Neural2)' },
 ] as const;
 

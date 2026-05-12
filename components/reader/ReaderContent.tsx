@@ -17,10 +17,11 @@ interface ReaderContentProps {
   textId: number;
   ttsEnabled: boolean;
   textTitle: string;
+  ttsVoice: string;
   ttsSpeakingRate: number;
 }
 
-export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId, ttsEnabled, textTitle, ttsSpeakingRate }: ReaderContentProps) {
+export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId, ttsEnabled, textTitle, ttsVoice, ttsSpeakingRate }: ReaderContentProps) {
   const [showFurigana, setShowFurigana] = useState(true);
   const [fontFamily, setFontFamily] = useState<'serif' | 'sans'>('serif');
   const [fontSize, setFontSize] = useState(18);
@@ -42,7 +43,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     return map;
   });
 
-  const tts = useTTSPlayer({ textId, sentences: content, textTitle, ttsEnabled });
+  const tts = useTTSPlayer({ textId, sentences: content, textTitle, ttsEnabled, ttsVoice });
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');

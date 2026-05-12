@@ -8,8 +8,8 @@ export interface TTSAudioCache {
   clearByPrefix(prefix: string): Promise<void>;
 }
 
-export function makeSentenceCacheKey(textId: number, sentenceIndex: number): string {
-  return `${textId}:${sentenceIndex}`;
+export function makeSentenceCacheKey(textId: number, sentenceIndex: number, voice: string): string {
+  return `${textId}:${voice}:${sentenceIndex}`;
 }
 
 function openDB(): Promise<IDBDatabase> {

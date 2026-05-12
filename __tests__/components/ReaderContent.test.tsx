@@ -9,19 +9,19 @@ describe('ReaderContent', () => {
   });
 
   it('defaults to showFurigana true when no localStorage key set', () => {
-    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsSpeakingRate={1.0} />);
+    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsVoice="ja-JP-Neural2-B" ttsSpeakingRate={1.0} />);
     expect(screen.getByRole('button', { name: /hide furigana/i })).toBeInTheDocument();
   });
 
   it('reads shiori-furigana from localStorage on mount', () => {
     localStorage.setItem('shiori-furigana', 'false');
-    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsSpeakingRate={1.0} />);
+    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsVoice="ja-JP-Neural2-B" ttsSpeakingRate={1.0} />);
     expect(screen.getByRole('button', { name: /show furigana/i })).toBeInTheDocument();
   });
 
   it('toggle button writes to localStorage on click', async () => {
     const user = userEvent.setup();
-    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsSpeakingRate={1.0} />);
+    render(<ReaderContent content={[]} wordStatusMap={{}} furiganaOverrides={[]} textId={1} ttsEnabled={false} textTitle="Test" ttsVoice="ja-JP-Neural2-B" ttsSpeakingRate={1.0} />);
     await user.click(screen.getByRole('button', { name: /hide furigana/i }));
     expect(localStorage.getItem('shiori-furigana')).toBe('false');
   });
