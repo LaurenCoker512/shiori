@@ -21,7 +21,7 @@ export async function getSession(): Promise<SessionUser | null> {
 
   const result = await query<SessionUser>(
     `SELECT u.id, u.name, u.email, u.openrouter_api_key, u.openrouter_model,
-            u.google_tts_api_key, u.tts_voice, u.tts_speaking_rate
+            u.google_tts_api_key, u.tts_voice, u.tts_speaking_rate::float8 AS tts_speaking_rate
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = $1 AND s.expires_at > NOW()`,
