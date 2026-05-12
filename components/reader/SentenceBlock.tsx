@@ -84,8 +84,8 @@ export function SentenceBlock({
       {ttsEnabled === true && (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onPlaySentence?.(); }}
-          className={`absolute top-[0.35em] left-[-1.8em] transition-opacity ${isActiveTTS === true ? 'opacity-70' : 'opacity-0 group-hover:opacity-50 focus:opacity-70'} hover:!opacity-100`}
+          onClick={(e) => { e.stopPropagation(); onPlaySentence?.(); e.currentTarget.blur(); }}
+          className={`absolute top-[0.9em] left-[-1.8em] transition-opacity ${isActiveTTS === true ? 'opacity-70' : 'opacity-0 group-hover:opacity-50 focus:opacity-70'} hover:!opacity-100`}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--yg-ink-soft)', padding: '2px 4px', lineHeight: 1 }}
           aria-label={`Play from sentence ${sentence.sentence_index + 1}`}
         >
