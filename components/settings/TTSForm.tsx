@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { TTS_VOICES, TTS_SPEAKING_RATE_MIN, TTS_SPEAKING_RATE_MAX } from "@/lib/tts";
 import type { TTSVoiceId } from "@/lib/tts";
 
@@ -13,6 +14,7 @@ interface TTSFormProps {
 }
 
 export function TTSForm({ hasTTSKey, ttsVoice, ttsSpeakingRate }: TTSFormProps) {
+  const router = useRouter();
   const [apiKey, setApiKey] = useState("");
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [keySaved, setKeySaved] = useState(hasTTSKey);
@@ -42,6 +44,7 @@ export function TTSForm({ hasTTSKey, ttsVoice, ttsSpeakingRate }: TTSFormProps) 
       setStatus("saved");
       if (apiKey.trim() !== "") setKeySaved(true);
       setApiKey("");
+      router.refresh();
     } else {
       const data = (await res.json()) as { error?: string };
       setErrorMessage(data.error ?? "Failed to save");
