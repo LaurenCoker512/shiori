@@ -43,7 +43,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
     return map;
   });
 
-  const tts = useTTSPlayer({ textId, sentences: content, textTitle, ttsEnabled, ttsVoice });
+  const tts = useTTSPlayer({ textId, sentences: content, textTitle, ttsEnabled, ttsVoice, furiganaOverrides: overrideMap });
 
   useEffect(() => {
     const stored = localStorage.getItem('shiori-furigana');

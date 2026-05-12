@@ -10,6 +10,19 @@ export interface UseTTSPlayerOptions {
   textTitle: string;
   ttsEnabled: boolean;
   ttsVoice: string;
+  furiganaOverrides: Record<string, string>;
+}
+
+// Sort longest surface first so e.g. "東京都" isn't partially matched by "東京".
+function applyFuriganaOverrides(text: string, overrides: Record<string, string>): string {
+  const entries = Object.entries(overrides);
+  if (entries.length === 0) return text;
+  entries.sort((a, b) => b[0].length - a[0].length);
+  let result = text;
+  for (const [surface, reading] of entries) {
+    result = result.replaceAll(surface, reading);
+  }
+  return result;
 }
 
 export interface UseTTSPlayerReturn {
@@ -43,6 +56,7 @@ export function useTTSPlayer({
   textTitle,
   ttsEnabled,
   ttsVoice,
+  furiganaOverrides,
 }: UseTTSPlayerOptions): UseTTSPlayerReturn {
   const cache = useRef(createIndexedDBCache());
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -52,9 +66,11 @@ export function useTTSPlayer({
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [activeSentenceIndex, setActiveSentenceIndex] = useState<number | null>(null);
 
-  // Stable ref so playback callbacks always see the latest state without stale closures.
+  // Stable refs so playback callbacks always see the latest state without stale closures.
   const isPlayingRef = useRef(false);
   const activeSentenceIndexRef = useRef<number | null>(null);
+  const furiganaOverridesRef = useRef(furiganaOverrides);
+  furiganaOverridesRef.current = furiganaOverrides;
 
   const setPlayingState = useCallback((playing: boolean) => {
     isPlayingRef.current = playing;
@@ -85,7 +101,8 @@ export function useTTSPlayer({
     const key = makeSentenceCacheKey(textId, sentenceIndex, ttsVoice);
     const cached = await cache.current.get(key);
     if (cached !== null) return cached;
-    const audio = await fetchAudio(sentences[sentenceIndex].raw);
+    const correctedText = applyFuriganaOverrides(sentences[sentenceIndex].raw, furiganaOverridesRef.current);
+    const audio = await fetchAudio(correctedText);
     await cache.current.set(key, audio);
     return audio;
   }
