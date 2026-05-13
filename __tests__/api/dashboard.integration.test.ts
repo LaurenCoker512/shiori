@@ -20,9 +20,6 @@ const FAKE_USER: SessionUser = {
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
 
-function makeGetRequest(): Request {
-  return new Request('http://localhost/api/dashboard');
-}
 
 describeIfDb('GET /api/dashboard — integration', () => {
   let testPool: Pool;
@@ -91,7 +88,7 @@ describeIfDb('GET /api/dashboard — integration', () => {
     await seedWord({ seen_at: '2024-01-01', known_at: '2024-01-02', status: 'known' });
     await seedWord({ known_at: '2024-01-02', seen_at: '2024-01-02', status: 'known' });
 
-    const response = await GET(makeGetRequest());
+    const response = await GET();
     expect(response.status).toBe(200);
     const data = await response.json() as {
       seenSeries: { date: string; count: number }[];
@@ -133,7 +130,7 @@ describeIfDb('GET /api/dashboard — integration', () => {
     ];
     await seedText(parsedContent);
 
-    const response = await GET(makeGetRequest());
+    const response = await GET();
     expect(response.status).toBe(200);
     const data = await response.json() as {
       comprehension: { text_id: number; title: string; pct_known: number }[];
@@ -156,7 +153,7 @@ describeIfDb('GET /api/dashboard — integration', () => {
       [textId, patternId],
     );
 
-    const response = await GET(makeGetRequest());
+    const response = await GET();
     expect(response.status).toBe(200);
     const data = await response.json() as {
       grammarPatterns: { pattern: string; sentence_count: number }[];
@@ -169,7 +166,7 @@ describeIfDb('GET /api/dashboard — integration', () => {
   });
 
   it('empty DB returns empty arrays', async () => {
-    const response = await GET(makeGetRequest());
+    const response = await GET();
     expect(response.status).toBe(200);
     const data = await response.json() as {
       seenSeries: unknown[];
