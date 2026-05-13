@@ -38,7 +38,7 @@ const iconBtnStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   borderRadius: 8,
-  padding: '6px 8px',
+  padding: '12px 10px',
   transition: 'opacity 0.15s',
 };
 

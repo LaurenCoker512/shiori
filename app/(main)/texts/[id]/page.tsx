@@ -51,7 +51,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
   );
 
   return (
-    <main className="max-w-[760px] mx-auto px-8 py-8">
+    <main className="max-w-[760px] mx-auto px-4 sm:px-8 py-8">
       <ReaderHeader title={text.title} textId={text.id} initialTags={tagsResult.rows} />
       <ReaderContent
         content={text.parsed_content}

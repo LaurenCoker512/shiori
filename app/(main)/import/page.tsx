@@ -2,7 +2,7 @@ import { ImportForm } from '@/components/import/ImportForm';
 
 export default function ImportPage() {
   return (
-    <main className="max-w-[700px] mx-auto px-8 py-10">
+    <main className="max-w-[700px] mx-auto px-4 sm:px-8 py-8 sm:py-10">
       <div className="mb-1">
         <span className="font-en text-[11px] font-semibold tracking-[1.5px] uppercase" style={{ color: 'var(--yg-coral)' }}>
           取り込み · Import

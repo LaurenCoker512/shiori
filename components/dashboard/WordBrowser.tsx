@@ -133,7 +133,7 @@ export function WordBrowser() {
   return (
     <div>
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
         <StatCard label="Total" value={total} sub="in library" />
         <StatCard label="Known" value={knownCount} sub="recognized" tintColor="var(--yg-bamboo)" bg="var(--yg-known)" />
         <StatCard label="Seen" value={seenCount} sub="learning" tintColor="var(--yg-coral)" bg="var(--yg-seen)" />
@@ -141,7 +141,7 @@ export function WordBrowser() {
       </div>
 
       {/* Search + filter row */}
-      <div className="flex gap-2.5 mb-4">
+      <div className="flex flex-wrap gap-2.5 mb-4">
         <div
           className="flex-1 flex items-center px-3 rounded-[10px] border"
           style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}

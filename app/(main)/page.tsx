@@ -63,9 +63,9 @@ export default async function LibraryPage() {
   const mostRecentText = comprehension[0] ?? null;
 
   return (
-    <main className="px-14 py-9 max-w-[1200px] mx-auto">
+    <main className="px-4 sm:px-8 lg:px-14 py-6 sm:py-9 max-w-[1200px] mx-auto">
       {/* Page header */}
-      <div className="flex items-baseline justify-between mb-7">
+      <div className="flex flex-wrap items-baseline justify-between gap-3 mb-7">
         <div>
           <h1 className="font-jp text-[36px] font-medium tracking-tight mb-1.5" style={{ color: 'var(--yg-ink)' }}>
             ようこそ、{user.name}さん。
@@ -106,7 +106,7 @@ export default async function LibraryPage() {
               <div className="font-en text-[11px] opacity-75 tracking-[2px] uppercase mb-2.5">
                 Continue reading
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-6">
                 <div className="flex-1 min-w-0">
                   <h2 className="font-en text-[28px] font-semibold mb-4 tracking-tight leading-[1.2] truncate">
                     {mostRecentText.title}

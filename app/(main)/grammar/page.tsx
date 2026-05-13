@@ -23,7 +23,7 @@ export default async function GrammarPage() {
   }));
 
   return (
-    <main className="px-14 py-9 max-w-[1200px] mx-auto">
+    <main className="px-4 sm:px-8 lg:px-14 py-6 sm:py-9 max-w-[1200px] mx-auto">
       <div className="mb-7">
         <span className="font-en text-[11px] font-semibold tracking-[1.5px] uppercase" style={{ color: 'var(--yg-coral)' }}>
           文法 · Grammar
