@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { createIndexedDBCache, makeSentenceCacheKey } from '@/lib/ttsCache';
-import type { Sentence } from '@/lib/types';
+import type { Sentence, Token } from '@/lib/types';
 
 export interface UseTTSPlayerOptions {
   textId: number;
@@ -13,16 +13,21 @@ export interface UseTTSPlayerOptions {
   furiganaOverrides: Record<string, string>;
 }
 
-// Sort longest surface first so e.g. "東京都" isn't partially matched by "東京".
-function applyFuriganaOverrides(text: string, overrides: Record<string, string>): string {
-  const entries = Object.entries(overrides);
-  if (entries.length === 0) return text;
-  entries.sort((a, b) => b[0].length - a[0].length);
-  let result = text;
-  for (const [surface, reading] of entries) {
-    result = result.replaceAll(surface, reading);
-  }
-  return result;
+function xmlEscape(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Builds SSML for a sentence, annotating each token that contains kanji with its
+// correct reading via <sub alias>. User overrides take priority over LLM readings.
+function buildSSML(tokens: Token[], overrides: Record<string, string>): string {
+  const parts = tokens.map(token => {
+    const reading = overrides[token.surface] ?? (token.surface !== token.reading ? token.reading : null);
+    if (reading !== null) {
+      return `<sub alias="${xmlEscape(reading)}">${xmlEscape(token.surface)}</sub>`;
+    }
+    return xmlEscape(token.surface);
+  });
+  return `<speak>${parts.join('')}</speak>`;
 }
 
 export interface UseTTSPlayerReturn {
@@ -37,11 +42,11 @@ export interface UseTTSPlayerReturn {
   downloadAll(): Promise<void>;
 }
 
-async function fetchAudio(text: string): Promise<ArrayBuffer> {
+async function fetchAudio(ssml: string): Promise<ArrayBuffer> {
   const res = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ ssml }),
   });
   if (!res.ok) {
     const body = await res.text();
@@ -101,8 +106,8 @@ export function useTTSPlayer({
     const key = makeSentenceCacheKey(textId, sentenceIndex, ttsVoice);
     const cached = await cache.current.get(key);
     if (cached !== null) return cached;
-    const correctedText = applyFuriganaOverrides(sentences[sentenceIndex].raw, furiganaOverridesRef.current);
-    const audio = await fetchAudio(correctedText);
+    const ssml = buildSSML(sentences[sentenceIndex].tokens, furiganaOverridesRef.current);
+    const audio = await fetchAudio(ssml);
     await cache.current.set(key, audio);
     return audio;
   }

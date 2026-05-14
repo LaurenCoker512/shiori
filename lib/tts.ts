@@ -15,15 +15,16 @@ export const TTS_SPEAKING_RATE_MAX = 2.0;
 
 export async function synthesizeSpeech(
   apiKey: string,
-  text: string,
+  input: string,
   voice: string,
   speakingRate: number,
+  inputType: 'text' | 'ssml' = 'text',
 ): Promise<ArrayBuffer> {
   const res = await fetch(`${GOOGLE_TTS_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      input: { text },
+      input: inputType === 'ssml' ? { ssml: input } : { text: input },
       voice: { languageCode: 'ja-JP', name: voice },
       audioConfig: { audioEncoding: 'MP3', speakingRate },
     }),

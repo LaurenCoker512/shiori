@@ -13,17 +13,24 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const body = await request.json() as { text?: unknown };
+  const body = await request.json() as { text?: unknown; ssml?: unknown };
 
-  if (typeof body.text !== 'string' || body.text.trim() === '') {
-    return jsonResponse({ error: 'text is required' }, 400);
+  const isSSML = typeof body.ssml === 'string' && body.ssml.trim() !== '';
+  const isText = typeof body.text === 'string' && body.text.trim() !== '';
+
+  if (!isSSML && !isText) {
+    return jsonResponse({ error: 'text or ssml is required' }, 400);
   }
+
+  const inputValue = isSSML ? (body.ssml as string).trim() : (body.text as string).trim();
+  const inputType = isSSML ? 'ssml' : 'text';
 
   const audio = await synthesizeSpeech(
     user.google_tts_api_key,
-    body.text.trim(),
+    inputValue,
     user.tts_voice,
     user.tts_speaking_rate,
+    inputType,
   );
 
   return new Response(audio, {
