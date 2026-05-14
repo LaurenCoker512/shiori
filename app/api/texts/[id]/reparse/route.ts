@@ -1,5 +1,5 @@
 import { parseHeadingSentinels } from '@/lib/text-processing';
-import { tokenizeText, buildLLMConfig } from '@/lib/claude';
+import { tokenizeText, buildLLMConfig } from '@/lib/llm';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { jsonResponse } from '@/lib/api';

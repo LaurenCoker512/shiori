@@ -1,6 +1,6 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { translateWord, buildLLMConfig } from '@/lib/claude';
+import { translateWord, buildLLMConfig } from '@/lib/llm';
 import { parseTranslations } from '@/lib/types';
 import type { Word } from '@/lib/types';
 import { jsonResponse } from '@/lib/api';

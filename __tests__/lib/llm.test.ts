@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { LLMConfig } from '@/lib/claude';
+import type { LLMConfig } from '@/lib/llm';
 
 const mockCreate = vi.hoisted(() => vi.fn());
 
@@ -9,7 +9,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   }),
 }));
 
-import { tokenizeText, analyzeGrammar, describeGrammarPattern, translateWord } from '@/lib/claude';
+import { tokenizeText, analyzeGrammar, describeGrammarPattern, translateWord } from '@/lib/llm';
 
 const anthropicConfig: LLMConfig = { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' };
 

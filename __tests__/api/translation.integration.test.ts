@@ -7,7 +7,7 @@ const mockTranslateWord = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
 const mockGetSession = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/claude', () => ({ translateWord: mockTranslateWord, buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })) }));
+vi.mock('@/lib/llm', () => ({ translateWord: mockTranslateWord, buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })) }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
 vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 

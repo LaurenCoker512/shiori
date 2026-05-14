@@ -7,7 +7,7 @@ const mockTokenizeText = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
 const mockGetSession = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/claude', () => ({
+vi.mock('@/lib/llm', () => ({
   tokenizeText: mockTokenizeText,
   buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })),
 }));

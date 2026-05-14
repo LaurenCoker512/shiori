@@ -1,6 +1,6 @@
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { analyzeGrammar, describeGrammarPattern, buildLLMConfig } from '@/lib/claude';
+import { analyzeGrammar, describeGrammarPattern, buildLLMConfig } from '@/lib/llm';
 import type { GrammarPattern, Sentence } from '@/lib/types';
 import { jsonResponse } from '@/lib/api';
 

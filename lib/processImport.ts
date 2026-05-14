@@ -1,5 +1,5 @@
-import { tokenizeText } from '@/lib/claude';
-import type { LLMConfig } from '@/lib/claude';
+import { tokenizeText } from '@/lib/llm';
+import type { LLMConfig } from '@/lib/llm';
 import { parseHeadingSentinels } from '@/lib/text-processing';
 import { query } from '@/lib/db';
 import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortControllers';

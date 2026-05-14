@@ -3,7 +3,7 @@ export const maxDuration = 300;
 import { waitUntil } from '@vercel/functions';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { buildLLMConfig } from '@/lib/claude';
+import { buildLLMConfig } from '@/lib/llm';
 import { processImport } from '@/lib/processImport';
 import { jsonResponse } from '@/lib/api';
 
