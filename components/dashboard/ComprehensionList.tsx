@@ -95,6 +95,33 @@ type CardAction =
   | { type: 'reparsing'; id: number }
   | { type: 'tagging'; id: number; currentTags: Tag[] };
 
+type SortKey = 'recent' | 'title-asc' | 'title-desc' | 'pct-asc' | 'pct-desc';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'recent',     label: 'Recently read' },
+  { value: 'title-asc',  label: 'Title A → Z' },
+  { value: 'title-desc', label: 'Title Z → A' },
+  { value: 'pct-asc',    label: 'Comprehension ↑' },
+  { value: 'pct-desc',   label: 'Comprehension ↓' },
+];
+
+function sortEntries(entries: ComprehensionEntry[], sort: SortKey): ComprehensionEntry[] {
+  return [...entries].sort((a, b) => {
+    switch (sort) {
+      case 'recent': {
+        if (a.last_read_at === null && b.last_read_at === null) return 0;
+        if (a.last_read_at === null) return 1;
+        if (b.last_read_at === null) return -1;
+        return new Date(b.last_read_at).getTime() - new Date(a.last_read_at).getTime();
+      }
+      case 'title-asc':  return a.title.localeCompare(b.title, 'ja');
+      case 'title-desc': return b.title.localeCompare(a.title, 'ja');
+      case 'pct-asc':    return a.pct_known - b.pct_known;
+      case 'pct-desc':   return b.pct_known - a.pct_known;
+    }
+  });
+}
+
 const MOODS = ['persimmon', 'moss', 'twilight', 'gold'];
 
 const MOOD_GRADIENTS: Record<string, string> = {
@@ -109,10 +136,33 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
   const [cardAction, setCardAction] = useState<CardAction>({ type: 'idle' });
   // Local tag overrides: updated optimistically after TagPicker saves
   const [localTags, setLocalTags] = useState<Map<number, Tag[]>>(new Map());
+  const [sortKey, setSortKey] = useState<SortKey>('recent');
+  const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
 
   function tagsFor(entry: ComprehensionEntry): Tag[] {
     return localTags.get(entry.text_id) ?? entry.tags ?? [];
   }
+
+  // Derive unique tags from all comprehension entries (respects localTags optimistic updates)
+  const allTags: Tag[] = [];
+  const seenTagIds = new Set<number>();
+  for (const entry of comprehension) {
+    for (const tag of tagsFor(entry)) {
+      if (!seenTagIds.has(tag.id)) {
+        seenTagIds.add(tag.id);
+        allTags.push(tag);
+      }
+    }
+  }
+
+  const hasTags = allTags.length > 0;
+  const showControls = hasTags || comprehension.length >= 2;
+
+  const filteredComprehension = selectedTagId === null
+    ? comprehension
+    : comprehension.filter(entry => tagsFor(entry).some(t => t.id === selectedTagId));
+
+  const sortedComprehension = sortEntries(filteredComprehension, sortKey);
 
   if (comprehension.length === 0 && processingTexts.length === 0) {
     return (
@@ -154,6 +204,79 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
 
   return (
     <>
+      {/* Sort & filter controls */}
+      {showControls && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {/* Tag filter pills */}
+          {hasTags && (
+            <div
+              className="flex flex-wrap items-center gap-1 p-1 rounded-[10px]"
+              style={{ background: 'rgba(42,36,28,0.06)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedTagId(null)}
+                className="font-en text-[12px] font-medium px-3 py-1 rounded-[7px] transition-all"
+                style={{
+                  background: selectedTagId === null ? '#fff' : 'transparent',
+                  boxShadow: selectedTagId === null ? '0 1px 2px rgba(0,0,0,0.07)' : 'none',
+                  color: selectedTagId === null ? '#2c2a28' : 'var(--yg-ink-soft)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                All
+              </button>
+              {allTags.map(tag => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => setSelectedTagId(tag.id)}
+                  className="inline-flex items-center gap-1.5 font-en text-[12px] font-medium px-3 py-1 rounded-[7px] transition-all"
+                  style={{
+                    background: selectedTagId === tag.id ? '#fff' : 'transparent',
+                    boxShadow: selectedTagId === tag.id ? '0 1px 2px rgba(0,0,0,0.07)' : 'none',
+                    color: selectedTagId === tag.id ? '#2c2a28' : 'var(--yg-ink-soft)',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: TAG_COLOR_SWATCHES[tag.color] }}
+                    aria-hidden="true"
+                  />
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Sort select */}
+          {comprehension.length >= 2 && (
+            <select
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value as SortKey)}
+              aria-label="Sort library"
+              className="font-en text-[12px] px-2.5 py-1.5 rounded-[8px] border appearance-none"
+              style={{
+                borderColor: 'var(--yg-rule)',
+                background: 'var(--yg-paper-hi)',
+                color: 'var(--yg-ink)',
+                cursor: 'pointer',
+              }}
+            >
+              {SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
         {processingTexts.map(entry => (
           <div
@@ -182,7 +305,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
           </div>
         ))}
 
-        {comprehension.map((entry, idx) => {
+        {sortedComprehension.map((entry, idx) => {
           const gradient = MOOD_GRADIENTS[MOODS[idx % MOODS.length]];
           const lastRead = entry.last_read_at !== null
             ? new Date(entry.last_read_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
@@ -308,6 +431,13 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
           );
         })}
       </div>
+
+      {/* Empty state when tag filter yields no results */}
+      {selectedTagId !== null && sortedComprehension.length === 0 && processingTexts.length === 0 && (
+        <p className="font-en text-sm" style={{ color: 'var(--yg-ink-soft)' }}>
+          No texts with this tag.
+        </p>
+      )}
 
       {cardAction.type === 'deleting' && (
         <ConfirmDialog
