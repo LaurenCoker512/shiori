@@ -194,7 +194,7 @@ export function SiteNav() {
         {/* Right side */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Editable name — desktop only */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block w-28">
             {editingName ? (
               <input
                 ref={nameInputRef}
