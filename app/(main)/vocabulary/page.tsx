@@ -13,13 +13,13 @@ export default async function VocabularyPage() {
   const [seenResult, knownResult] = await Promise.all([
     query<{ date: string; count: string }>(
       `SELECT DATE(seen_at) AS date, COUNT(*) AS count
-       FROM words WHERE user_id = $1 AND seen_at IS NOT NULL AND status IN ('seen', 'known')
+       FROM words WHERE user_id = $1 AND seen_at IS NOT NULL
        GROUP BY DATE(seen_at) ORDER BY date ASC`,
       [uid],
     ),
     query<{ date: string; count: string }>(
       `SELECT DATE(known_at) AS date, COUNT(*) AS count
-       FROM words WHERE user_id = $1 AND known_at IS NOT NULL AND status = 'known'
+       FROM words WHERE user_id = $1 AND known_at IS NOT NULL
        GROUP BY DATE(known_at) ORDER BY date ASC`,
       [uid],
     ),

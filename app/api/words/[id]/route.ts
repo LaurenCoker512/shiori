@@ -22,14 +22,10 @@ export async function PATCH(
     updates.push(`status = $${values.length + 1}`);
     values.push(body.status);
 
-    if (body.status === 'unseen') {
-      updates.push(`seen_at = NULL`);
-      updates.push(`known_at = NULL`);
-    } else if (body.status === 'seen') {
+    if (body.status === 'seen') {
       updates.push(`seen_at = COALESCE(seen_at, NOW())`);
       updates.push(`known_at = NULL`);
     } else if (body.status === 'known') {
-      updates.push(`seen_at = COALESCE(seen_at, NOW())`);
       updates.push(`known_at = NOW()`);
     }
   }
