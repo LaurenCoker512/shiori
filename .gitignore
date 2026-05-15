@@ -36,6 +36,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# database backups
+/backups
+
 # Docs
 FUTURE_FEATURES.md
 DEPLOYMENT.md
