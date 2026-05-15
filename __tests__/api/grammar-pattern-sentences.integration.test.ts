@@ -16,14 +16,14 @@ const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
 
 const USER_1: SessionUser = {
-  id: 1,
+  id: '00000000-0000-0000-0000-000000000001',
   name: 'User One',
   email: 'user1@example.com',
   openrouter_api_key: null,
   openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
 };
 
-const USER_2: SessionUser = { ...USER_1, id: 2, name: 'User Two', email: 'user2@example.com' };
+const USER_2: SessionUser = { ...USER_1, id: '00000000-0000-0000-0000-000000000002', name: 'User Two', email: 'user2@example.com' };
 
 function makeGetRequest(): Request {
   return new Request('http://localhost/api/grammar-patterns/1/sentences');

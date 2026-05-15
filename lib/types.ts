@@ -28,7 +28,7 @@ export type ParsedContent = Sentence[];
 
 export interface Word {
   id: number;
-  user_id: number;
+  user_id: string;
   dictionary_form: string;
   reading: string;
   status: WordStatus;

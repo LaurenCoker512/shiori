@@ -22,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const existing = await query<{ id: number }>(
+    const existing = await query<{ id: string }>(
       'SELECT id FROM users WHERE email = $1',
       [body.email.toLowerCase()],
     );
@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const passwordHash = await bcrypt.hash(body.password, 12);
 
-    const result = await query<{ id: number }>(
+    const result = await query<{ id: string }>(
       'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
       [body.name.trim(), body.email.toLowerCase(), passwordHash],
     );

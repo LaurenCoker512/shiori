@@ -5,7 +5,7 @@ const COOKIE_NAME = 'shiori_session';
 const SESSION_DAYS = 30;
 
 export interface SessionUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   openrouter_api_key: string | null;
@@ -31,7 +31,7 @@ export async function getSession(): Promise<SessionUser | null> {
   return result.rows[0] ?? null;
 }
 
-export async function createSession(userId: number): Promise<void> {
+export async function createSession(userId: string): Promise<void> {
   const sessionId = crypto.randomUUID();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_DAYS);

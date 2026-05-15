@@ -6,7 +6,7 @@ import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortCon
 
 export async function processImport(
   textId: number,
-  userId: number,
+  userId: string,
   rawContent: string,
   config: LLMConfig,
 ): Promise<void> {
