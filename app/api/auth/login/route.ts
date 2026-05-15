@@ -13,7 +13,7 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: 'Email and password are required' }, 400);
   }
 
-  const result = await query<{ id: string; password_hash: string }>(
+  const result = await query<{ id: number; password_hash: string }>(
     'SELECT id, password_hash FROM users WHERE email = $1',
     [body.email.toLowerCase()],
   );

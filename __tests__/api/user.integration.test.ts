@@ -16,7 +16,7 @@ const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
 
 const FAKE_USER: SessionUser = {
-  id: '00000000-0000-0000-0000-000000000001',
+  id: 1,
   name: 'Test User',
   email: 'test@example.com',
   openrouter_api_key: null,

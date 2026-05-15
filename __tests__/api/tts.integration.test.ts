@@ -10,7 +10,7 @@ import { POST } from '@/app/api/tts/route';
 import type { SessionUser } from '@/lib/session';
 
 const FAKE_USER: SessionUser = {
-  id: '00000000-0000-0000-0000-000000000001',
+  id: 1,
   name: 'Test',
   email: 'test@example.com',
   openrouter_api_key: null,

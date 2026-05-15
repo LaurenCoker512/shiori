@@ -14,7 +14,7 @@ import type { ParsedContent, Word } from '@/lib/types';
 import type { SessionUser } from '@/lib/session';
 
 const FAKE_USER: SessionUser = {
-  id: '00000000-0000-0000-0000-000000000001', name: 'Test', email: 'test@example.com',
+  id: 1, name: 'Test', email: 'test@example.com',
   openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
 };
 
