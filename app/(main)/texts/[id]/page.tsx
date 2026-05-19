@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session';
 import type { ParsedContent, Word, FuriganaOverride, Tag } from '@/lib/types';
 import { ReaderHeader } from '@/components/reader/ReaderHeader';
 import { ReaderContent } from '@/components/reader/ReaderContent';
+import { toHiragana } from '@/lib/text-processing';
 
 interface TextRow {
   id: number;
@@ -42,7 +43,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
   ]);
   const wordStatusMap: Record<string, Word> = {};
   for (const word of wordsResult.rows) {
-    wordStatusMap[`${word.dictionary_form}|${word.reading}`] = word;
+    wordStatusMap[`${word.dictionary_form}|${toHiragana(word.reading)}`] = word;
   }
 
   const furiganaResult = await query<FuriganaOverride>(

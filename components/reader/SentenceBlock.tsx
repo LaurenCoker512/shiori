@@ -1,6 +1,7 @@
 'use client';
 
 import type { Sentence, Word } from '@/lib/types';
+import { toHiragana } from '@/lib/text-processing';
 import { WordToken } from './WordToken';
 
 const HEADING_FONT = "var(--reader-jp-font, var(--font-zen-mincho)), 'Yu Mincho', serif";
@@ -53,7 +54,7 @@ export function SentenceBlock({
     <WordToken
       key={i}
       token={token}
-      word={wordStatusMap[`${token.dictionary_form}|${token.dict_reading}`] ?? null}
+      word={wordStatusMap[`${token.dictionary_form}|${toHiragana(token.dict_reading)}`] ?? null}
       furiganaOverride={furiganaOverrides[token.surface] ?? null}
       showFurigana={showFurigana}
       onWordClick={onWordClick}

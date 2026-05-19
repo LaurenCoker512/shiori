@@ -1,6 +1,6 @@
 import { tokenizeText } from '@/lib/llm';
 import type { LLMConfig } from '@/lib/llm';
-import { parseHeadingSentinels } from '@/lib/text-processing';
+import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
 import { query } from '@/lib/db';
 import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortControllers';
 
@@ -40,7 +40,7 @@ export async function processImport(
       .filter(t => t.is_content_word && !UNIVERSAL_TOKEN.test(t.dictionary_form));
     if (contentWords.length > 0) {
       const forms = contentWords.map(t => t.dictionary_form);
-      const readings = contentWords.map(t => t.dict_reading);
+      const readings = contentWords.map(t => toHiragana(t.dict_reading));
       await query(
         `INSERT INTO words (user_id, dictionary_form, reading)
          SELECT $1, unnest($2::text[]), unnest($3::text[])

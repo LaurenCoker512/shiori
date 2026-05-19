@@ -192,12 +192,13 @@ Return ONLY a valid JSON array of sentences — no prose, no markdown, no code f
 Each sentence is itself an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
 - surface_reading: hiragana reading of the surface form as it appears in the text
 - dict_reading: hiragana reading of the dictionary_form (the base/plain form)
-- is_content_word: MUST be exactly the integer 1 or 0 — no other value, no text, no comments. Use 1 for nouns/verbs/adjectives/adverbs/fixed expressions/proper nouns; 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script words (e.g. DNA, 8, ***, 1960)
+- is_content_word: MUST be exactly the integer 1 or 0 — no other value, no text, no comments. Use 1 for nouns/verbs/adjectives/adverbs/fixed expressions/proper nouns — including Latin-script proper nouns (person names, place names) that function as Japanese words; 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script abbreviations or foreign words not used as Japanese proper nouns (e.g. DNA, OK, 8, ***, 1960).
+- For Latin-script proper nouns marked is_content_word=1, surface_reading and dict_reading MUST be hiragana (e.g. "Ai" → "あい", "Tokyo" → "とうきょう"). Never use romaji or katakana as a reading.
 
 Output shape (array of sentences, each sentence is an array of token tuples):
 [
   [["surface1","dict1","reading1","dictreading1",1], ["surface2","dict2","reading2","dictreading2",0]],
-  [["YuzuruName","YuzuruName","ゆずる","ゆずる",1], ["particle","particle","の","の",0]]
+  [["Ai","Ai","あい","あい",1], ["は","は","は","は",0], ["Tokyo","Tokyo","とうきょう","とうきょう",1]]
 ]
 The fifth element is always 1 or 0. Never write anything else there — no floats, no negative numbers, no words.
 

@@ -1,5 +1,12 @@
 import type { Sentence } from './types';
 
+// Converts full-width katakana (U+30A1–U+30F6) to hiragana (U+3041–U+3096).
+// Used to normalise LLM-returned readings before storage and lookup, since the
+// LLM occasionally returns katakana despite being instructed to use hiragana.
+export function toHiragana(str: string): string {
+  return str.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
 const HEADING_SENTINEL = /^__HEADING_([1-6])__(.*)$/;
 
 export function parseHeadingSentinels(sentences: Sentence[]): Sentence[] {

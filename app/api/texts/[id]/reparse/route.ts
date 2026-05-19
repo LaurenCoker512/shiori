@@ -1,4 +1,4 @@
-import { parseHeadingSentinels } from '@/lib/text-processing';
+import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
 import { tokenizeText, buildLLMConfig } from '@/lib/llm';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
@@ -58,7 +58,7 @@ export async function POST(
 
   if (contentWords.length > 0) {
     const forms = contentWords.map(t => t.dictionary_form);
-    const readings = contentWords.map(t => t.dict_reading);
+    const readings = contentWords.map(t => toHiragana(t.dict_reading));
     await query(
       `INSERT INTO words (user_id, dictionary_form, reading)
        SELECT $1, unnest($2::text[]), unnest($3::text[])
