@@ -80,13 +80,13 @@ export function SentenceBlock({
   return (
     <div
       className="group relative my-[0.7em]"
-      style={isActiveTTS === true ? { borderLeft: '2px solid var(--yg-known)', paddingLeft: '0.35em' } : undefined}
+      style={ttsEnabled === true ? { borderLeft: isActiveTTS === true ? '2px solid var(--yg-known)' : '2px solid transparent', paddingLeft: '0.35em' } : undefined}
     >
       {ttsEnabled === true && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onPlaySentence?.(); e.currentTarget.blur(); }}
-          className={`absolute top-[0.9em] left-[-1.8em] transition-opacity ${isActiveTTS === true ? 'opacity-70' : 'opacity-0 group-hover:opacity-50 focus:opacity-70'} hover:!opacity-100`}
+          className={`absolute top-[0.9em] left-[-2.1em] transition-opacity ${isActiveTTS === true ? 'opacity-70' : 'opacity-0 group-hover:opacity-50 focus:opacity-70'} hover:!opacity-100`}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--yg-ink-soft)', padding: '2px 4px', lineHeight: 1 }}
           aria-label={`Play from sentence ${sentence.sentence_index + 1}`}
         >
