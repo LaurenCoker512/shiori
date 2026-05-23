@@ -1,6 +1,6 @@
 const DB_NAME = 'shiori-tts';
 const STORE_NAME = 'audio';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface TTSAudioCache {
   get(key: string): Promise<ArrayBuffer | null>;

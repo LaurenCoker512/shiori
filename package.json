@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "psql $DATABASE_URL -f migrations/001_initial.sql && psql $DATABASE_URL -f migrations/002_auth.sql && psql $DATABASE_URL -f migrations/003_import_status.sql && psql $DATABASE_URL -f migrations/004_user_api_key.sql && psql $DATABASE_URL -f migrations/005_ai_provider.sql",
-    "db:backup": "mkdir -p backups && pg_dump $RAILWAY_DATABASE_URL --format=custom --file=backups/$(date +%Y-%m-%d_%H-%M).dump"
+    "db:backup": "mkdir -p backups && $(brew --prefix postgresql@18)/bin/pg_dump $RAILWAY_DATABASE_URL --format=custom --file=backups/$(date +%Y-%m-%d_%H-%M).dump"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

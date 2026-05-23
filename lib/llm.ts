@@ -190,7 +190,7 @@ async function tokenizeChunk(config: LLMConfig, chunk: string, chunkLabel: strin
 
 Return ONLY a valid JSON array of sentences — no prose, no markdown, no code fences, no wrapper object.
 Each sentence is itself an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
-- surface_reading: hiragana reading of the surface form as it appears in the text
+- surface_reading: exact hiragana reading of the surface form. Any kana already present in the surface (okurigana) MUST appear verbatim and in the same relative position within the reading — never alter or drop them. Examples: 思った→おもった (not おまった), 向いた→むいた (not むかいた), 温まった→あたたまった (not ぬくまった), 書かれた→かかれた. When a kanji has multiple possible readings, choose the one that fits the grammatical form and context.
 - dict_reading: hiragana reading of the dictionary_form (the base/plain form)
 - is_content_word: MUST be exactly the integer 1 or 0 — no other value, no text, no comments. Use 1 for nouns/verbs/adjectives/adverbs/fixed expressions/proper nouns — including Latin-script proper nouns (person names, place names) that function as Japanese words; 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script abbreviations or foreign words not used as Japanese proper nouns (e.g. DNA, OK, 8, ***, 1960).
 - For Latin-script proper nouns marked is_content_word=1, surface_reading and dict_reading MUST be hiragana (e.g. "Ai" → "あい", "Tokyo" → "とうきょう"). Never use romaji or katakana as a reading.
