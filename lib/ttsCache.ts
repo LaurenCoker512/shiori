@@ -1,6 +1,6 @@
 const DB_NAME = 'shiori-tts';
 const STORE_NAME = 'audio';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export interface TTSAudioCache {
   get(key: string): Promise<ArrayBuffer | null>;
@@ -15,8 +15,12 @@ export function makeSentenceCacheKey(textId: number, sentenceIndex: number, voic
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME);
+    req.onupgradeneeded = (event) => {
+      const db = req.result;
+      if (event.oldVersion > 0 && db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
+      }
+      db.createObjectStore(STORE_NAME);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

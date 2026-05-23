@@ -17,13 +17,18 @@ function xmlEscape(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Builds SSML for a sentence, annotating each token that contains kanji with its
-// correct reading via <sub alias>. User overrides take priority over LLM readings.
+// Builds SSML for a sentence. User overrides always take priority. For Latin-script
+// tokens (romaji names etc.) we supply the kana reading since Google TTS can't read
+// them reliably as Japanese. For kanji tokens we let Google TTS read natively —
+// its Japanese engine is more accurate than LLM-generated readings.
 function buildSSML(tokens: Token[], overrides: Record<string, string>): string {
   const parts = tokens.map(token => {
-    const reading = overrides[token.surface] ?? (token.surface !== token.reading ? token.reading : null);
-    if (reading !== null) {
-      return `<sub alias="${xmlEscape(reading)}">${xmlEscape(token.surface)}</sub>`;
+    const override = overrides[token.surface];
+    if (override !== undefined) {
+      return `<sub alias="${xmlEscape(override)}">${xmlEscape(token.surface)}</sub>`;
+    }
+    if (/[A-Za-z]/.test(token.surface) && token.reading !== token.surface) {
+      return `<sub alias="${xmlEscape(token.reading)}">${xmlEscape(token.surface)}</sub>`;
     }
     return xmlEscape(token.surface);
   });
