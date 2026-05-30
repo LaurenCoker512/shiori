@@ -7,6 +7,11 @@ const nextConfig = {
     staleTimes: {
       dynamic: 0,
     },
+    outputFileTracingIncludes: {
+      '/api/**': [
+        './data/frequency/**',
+      ],
+    },
   },
 };
 

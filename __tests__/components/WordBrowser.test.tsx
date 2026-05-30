@@ -21,6 +21,7 @@ function makeWord(overrides: Partial<Word> = {}): Word {
     translation: '["cat"]',
     user_translation: null,
     jlpt_level: 'N5',
+    frequency_tier: null,
     seen_at: '2024-01-01',
     known_at: null,
     ...overrides,

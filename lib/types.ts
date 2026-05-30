@@ -35,6 +35,7 @@ export interface Word {
   translation: string | null;
   user_translation: string | null;
   jlpt_level: JlptLevel | null;
+  frequency_tier: 'very-common' | 'common' | 'uncommon' | 'rare' | 'very-rare' | null;
   seen_at: string | null;
   known_at: string | null;
 }

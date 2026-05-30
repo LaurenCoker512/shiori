@@ -29,6 +29,7 @@ const unseenWord: Word = {
   translation: null,
   user_translation: null,
   jlpt_level: null,
+  frequency_tier: null,
   seen_at: null,
   known_at: null,
 };
