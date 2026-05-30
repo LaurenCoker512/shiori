@@ -13,6 +13,7 @@ vi.mock('@/lib/llm', () => ({
 }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
 vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
+vi.mock('@/lib/frequency', () => ({ lookupFrequencyTier: vi.fn().mockResolvedValue(null) }));
 
 import { POST } from '@/app/api/texts/route';
 import type { ParsedContent } from '@/lib/types';
@@ -60,6 +61,8 @@ describeIfDb('POST /api/texts — integration', () => {
     await testPool.query(migration);
     const importStatus = readFileSync(join(process.cwd(), 'migrations/003_import_status.sql'), 'utf-8');
     await testPool.query(importStatus);
+    const migration009 = readFileSync(join(process.cwd(), 'migrations/009_frequency.sql'), 'utf-8');
+    await testPool.query(migration009);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
     mockGetSession.mockResolvedValue(FAKE_USER);

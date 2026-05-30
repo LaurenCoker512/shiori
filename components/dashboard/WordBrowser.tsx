@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Word, WordStatus, JlptLevel } from '@/lib/types';
+import type { Word, WordStatus, JlptLevel, FrequencyTier } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
 import { useKnownWordCount } from '@/components/ui/KnownWordCountContext';
@@ -44,6 +44,7 @@ export function WordBrowser() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'' | WordStatus>('');
   const [jlpt, setJlpt] = useState<'' | JlptLevel>('');
+  const [frequencyTier, setFrequencyTier] = useState<'' | FrequencyTier>('');
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -53,12 +54,13 @@ export function WordBrowser() {
   const prevSearchRef = useRef('');
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const fetchWords = useCallback(async (q: string, st: string, jp: string, pg: number) => {
+  const fetchWords = useCallback(async (q: string, st: string, jp: string, ft: string, pg: number) => {
     setLoading(true);
     const params = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(pg) });
     if (q) params.set('search', q);
     if (st) params.set('status', st);
     if (jp) params.set('jlpt_level', jp);
+    if (ft) params.set('frequency_tier', ft);
     const res = await fetch(`/api/words?${params.toString()}`);
     const data = await res.json() as { words: Word[]; total: number; knownCount: number; seenCount: number; unseenCount: number };
     setWords(data.words);
@@ -74,12 +76,12 @@ export function WordBrowser() {
     prevSearchRef.current = search;
 
     if (isSearchChange) {
-      const timer = setTimeout(() => { void fetchWords(search, status, jlpt, page); }, 300);
+      const timer = setTimeout(() => { void fetchWords(search, status, jlpt, frequencyTier, page); }, 300);
       return () => clearTimeout(timer);
     }
 
-    void fetchWords(search, status, jlpt, page);
-  }, [search, status, jlpt, page, fetchWords]);
+    void fetchWords(search, status, jlpt, frequencyTier, page);
+  }, [search, status, jlpt, frequencyTier, page, fetchWords]);
 
   async function lookUpTranslation(word: Word) {
     setFetchingTranslationIds(prev => new Set(prev).add(word.id));
@@ -196,6 +198,24 @@ export function WordBrowser() {
           <option value="N3">N3</option>
           <option value="N2">N2</option>
           <option value="N1">N1</option>
+        </select>
+        <select
+          aria-label="Filter by frequency tier"
+          value={frequencyTier}
+          onChange={e => { setFrequencyTier(e.target.value as '' | FrequencyTier); setPage(1); }}
+          className="border rounded-[10px] px-3 py-2 font-en text-[11px]"
+          style={{
+            background: 'var(--yg-paper-hi)',
+            borderColor: 'var(--yg-rule)',
+            color: 'var(--yg-ink)',
+          }}
+        >
+          <option value="">All frequencies</option>
+          <option value="very-common">Very common</option>
+          <option value="common">Common</option>
+          <option value="uncommon">Uncommon</option>
+          <option value="rare">Rare</option>
+          <option value="very-rare">Very rare</option>
         </select>
       </div>
 

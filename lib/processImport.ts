@@ -3,6 +3,7 @@ import type { LLMConfig } from '@/lib/llm';
 import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
 import { query } from '@/lib/db';
 import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortControllers';
+import { lookupFrequencyTier } from '@/lib/frequency';
 
 export async function processImport(
   textId: number,
@@ -41,11 +42,14 @@ export async function processImport(
     if (contentWords.length > 0) {
       const forms = contentWords.map(t => t.dictionary_form);
       const readings = contentWords.map(t => toHiragana(t.dict_reading));
+      const frequencyTiers = await Promise.all(
+        contentWords.map(t => lookupFrequencyTier(t.dictionary_form, toHiragana(t.dict_reading))),
+      );
       await query(
-        `INSERT INTO words (user_id, dictionary_form, reading)
-         SELECT $1, unnest($2::text[]), unnest($3::text[])
+        `INSERT INTO words (user_id, dictionary_form, reading, frequency_tier)
+         SELECT $1, unnest($2::text[]), unnest($3::text[]), unnest($4::text[])
          ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-        [userId, forms, readings],
+        [userId, forms, readings, frequencyTiers],
       );
     }
   } catch (err) {

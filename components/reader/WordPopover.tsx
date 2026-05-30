@@ -200,6 +200,11 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
               {word.jlpt_level}
             </span>
           )}
+          {word.frequency_tier !== null && (
+            <span className="font-en text-[11px]" style={{ color: 'var(--yg-ink-muted)' }}>
+              {word.frequency_tier}
+            </span>
+          )}
         </div>
 
         <div className="flex items-baseline gap-3 flex-wrap">

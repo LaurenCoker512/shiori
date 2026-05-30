@@ -1,5 +1,6 @@
 export type WordStatus = 'unseen' | 'seen' | 'known';
 export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2' | 'N1';
+export type FrequencyTier = 'very-common' | 'common' | 'uncommon' | 'rare' | 'very-rare';
 export type TagColor = 'coral' | 'bamboo' | 'indigo' | 'gold';
 
 export interface Tag {
@@ -35,7 +36,7 @@ export interface Word {
   translation: string | null;
   user_translation: string | null;
   jlpt_level: JlptLevel | null;
-  frequency_tier: 'very-common' | 'common' | 'uncommon' | 'rare' | 'very-rare' | null;
+  frequency_tier: FrequencyTier | null;
   seen_at: string | null;
   known_at: string | null;
 }

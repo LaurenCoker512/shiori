@@ -2,6 +2,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import type { Word, WordStatus } from '@/lib/types';
 import { jsonResponse } from '@/lib/api';
+import { lookupFrequencyTier } from '@/lib/frequency';
 
 export async function PATCH(
   request: Request,
@@ -49,5 +50,17 @@ export async function PATCH(
     return jsonResponse({ error: 'Not found' }, 404);
   }
 
-  return jsonResponse(result.rows[0]);
+  const updatedWord = result.rows[0];
+  if (updatedWord.frequency_tier === null) {
+    const tier = await lookupFrequencyTier(updatedWord.dictionary_form, updatedWord.reading);
+    if (tier !== null) {
+      const backfilled = await query<Word>(
+        `UPDATE words SET frequency_tier = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
+        [tier, id, user.id],
+      );
+      return jsonResponse(backfilled.rows[0]);
+    }
+  }
+
+  return jsonResponse(updatedWord);
 }

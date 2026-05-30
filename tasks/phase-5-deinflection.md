@@ -8,9 +8,10 @@
 
 ## Read first
 
-- `lib/jmdict.ts` — to add Stage 2 lookup
-- `components/reader/WordPopover.tsx` — to add derivation note display
-- `__tests__/components/WordPopover.test.tsx` — to add derivation test
+- `lib/types.ts` — `JMdictEntry` interface (add `derivationChain` here, NOT in jmdict.ts)
+- `lib/jmdict.ts` — `buildEntry` and `lookupWord` (add Stage 2 lookup here)
+- `components/reader/WordPopover.tsx` — `JMdictDisplay` component (add derivation note)
+- `__tests__/components/WordPopover.test.tsx` — add derivation test
 - Friend's repo: `client/src/lib/japaneseTransforms.ts` and `client/src/lib/japaneseDeinflect.ts`
 
 ---
@@ -40,11 +41,9 @@ Return type is a pure array — no async, no dependencies. Ideal for unit testin
 
 ---
 
-## 2. Update `lib/jmdict.ts`
+## 2. Update `lib/types.ts`
 
-Add Stage 2 to `lookupWord`: when the direct lookup returns `null`, deinflect `dictionaryForm` and try each candidate `baseForm` against JMdict. Return the first hit (if any), flagged so `WordPopover` can show the derivation chain.
-
-Update the return type to carry optional deinflection metadata:
+Add `derivationChain` to `JMdictEntry` (this is where the interface lives, not in `lib/jmdict.ts`):
 
 ```ts
 export interface JMdictEntry {
@@ -55,24 +54,23 @@ export interface JMdictEntry {
 }
 ```
 
-In `lookupWord`:
+---
+
+## 3. Update `lib/jmdict.ts`
+
+Add Stage 2 to `lookupWord`: when the direct lookup returns `null`, deinflect `dictionaryForm` and try each candidate `baseForm` against JMdict. Return the first hit (if any) with its derivation chain.
 
 ```ts
-// Stage 2: deinflection fallback
 import { deinflect } from '@/lib/deinflect';
 
+// Stage 2: deinflection fallback (inside lookupWord, after the Stage 1 null return)
 const candidates = deinflect(dictionaryForm);
 for (const { baseForm, derivationChain } of candidates) {
-  const results = await db.getWords(baseForm);
+  const results = await getWords(baseForm);
   if (results.length > 0) {
-    const r = results[0];
-    const senses = r.s.map(/* same mapping as Stage 1 */);
-    return {
-      id: r.id,
-      senses,
-      jlpt_level: jlptLevel(baseForm),
-      derivationChain,
-    };
+    const match = results[0]!;
+    const entry = buildEntry(match, baseForm);
+    return { ...entry, derivationChain };
   }
 }
 return null;
@@ -80,7 +78,7 @@ return null;
 
 ---
 
-## 3. Update `components/reader/WordPopover.tsx`
+## 4. Update `components/reader/WordPopover.tsx`
 
 In the `JMdictDisplay` component, show the derivation chain when present:
 
@@ -94,7 +92,7 @@ In the `JMdictDisplay` component, show the derivation chain when present:
 
 ---
 
-## 4. Tests
+## 5. Tests
 
 ### New: `__tests__/lib/deinflect.test.ts`
 
@@ -139,7 +137,7 @@ it('deinflected result → derivation chain note rendered', async () => {
     senses: [{ pos: ['v1'], glosses: ['to eat'] }],
     derivationChain: ['passive', 'polite', 'past'],
   });
-  render(
+  renderWithProvider(
     <WordPopover
       word={makeWord({ translation: null, user_translation: null })}
       anchorRect={mockAnchorRect}
@@ -155,19 +153,25 @@ it('deinflected result → derivation chain note rendered', async () => {
 
 ### Update: `__tests__/lib/jmdict.test.ts`
 
-Add one test for the deinflection Stage 2 path:
+Add one test for the deinflection Stage 2 path. `vi.mock` must be at the top level of the file alongside the existing `vi.mock('@birchill/jpdict-idb', ...)` — NOT inside an `it()` block (vitest hoists `vi.mock` calls; placing them inside tests has no effect):
 
 ```ts
+// At top of file, alongside existing mocks:
+vi.mock('@/lib/deinflect', () => ({
+  deinflect: vi.fn(),
+}));
+
+import { deinflect } from '@/lib/deinflect';
+
+// Inside describe block:
 it('Stage 2: deinflection hit → returns entry with derivationChain', async () => {
-  // First getWords call (direct) returns []; second (deinflected base) returns fixture
   vi.mocked(mockGetWords)
-    .mockResolvedValueOnce([])   // Stage 1 miss
-    .mockResolvedValueOnce([fixtureEntry]); // Stage 2 hit
-  
-  // mock deinflect to return a known candidate
-  vi.mock('@/lib/deinflect', () => ({
-    deinflect: () => [{ baseForm: '食べる', derivationChain: ['past'] }],
-  }));
+    .mockResolvedValueOnce([])            // Stage 1 miss
+    .mockResolvedValueOnce([fixtureEntry]); // Stage 2 hit on deinflected base
+
+  vi.mocked(deinflect).mockReturnValue([
+    { baseForm: '食べる', derivationChain: ['past'] },
+  ]);
 
   const result = await lookupWord('食べた', 'たべた');
   expect(result?.derivationChain).toEqual(['past']);

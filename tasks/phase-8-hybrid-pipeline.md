@@ -8,7 +8,7 @@
 
 ## Read first
 
-- `lib/processImport.ts` — full file; identify the `tokenizeText` call site
+- `lib/processImport.ts` — full file; identify the `tokenizeText` call site (returns `void`, not tokens — tests must assert on DB calls, not return values)
 - `lib/types.ts` — `Token` interface field names
 - `components/settings/VocabularyActions.tsx` — add "Re-parse texts" here (created in Phase 6)
 - `app/api/texts/[id]/` — find the reparse route to understand how re-import is triggered
@@ -20,18 +20,18 @@
 Replace the `tokenizeText(config, text)` call with the hybrid pipeline:
 
 ```
-1. const kuroTokens = await kuromojiTokenize(text)
+1. const kuroTokens = await kuromojiTokenize(normalizedContent, abortController.signal)
 2. Convert IpadicFeatures[] → preliminary Token[] (see field mapping below)
 3. Filter: needsLlm = kuroTokens where surface_form contains kanji OR word_type === 'UNKNOWN'
    Kanji regex: /[一-鿿㐀-䶿]/
-4. const llmReadings = needsLlm.length > 0
+4. const llmReadings = config && needsLlm.length > 0
      ? await assignKanjiReadings(config, needsLlm.map(t => ({
          surface: t.surface_form,
          dictionary_form: t.basic_form,
          sentence_context: getSentenceContext(t, kuroTokens),
-       })), signal)
-     : []
-5. Merge llmReadings back into the preliminary Token[]
+       })), abortController.signal).catch(() => null)
+     : null
+5. Merge llmReadings back into the preliminary Token[] (fall back to toHiragana(kuromoji reading) when null)
 6. Continue with existing parseHeadingSentinels() + DB insert (unchanged)
 ```
 
@@ -41,29 +41,21 @@ Replace the `tokenizeText(config, text)` call with the hybrid pipeline:
 |---|---|
 | `surface` | `surface_form` |
 | `dictionary_form` | `basic_form` (use `surface_form` if `basic_form` is `'*'`) |
-| `reading` | For pure-kana: `toHiragana(reading)`. For kanji/unknown: LLM `surface_reading` |
-| `dict_reading` | For pure-kana: `toHiragana(reading)` if `basic_form` is pure kana. For kanji/unknown: LLM `dict_reading` |
+| `reading` | For pure-kana: `toHiragana(reading ?? surface_form)`. For kanji/unknown: LLM `surface_reading` (fallback: `toHiragana(reading ?? surface_form)`) |
+| `dict_reading` | For pure-kana: `toHiragana(basic_form)` if pure kana, else `toHiragana(reading ?? surface_form)`. For kanji/unknown: LLM `dict_reading` (fallback: `toHiragana(reading ?? surface_form)`) |
 | `is_content_word` | `true` if `pos` ∈ `['名詞', '動詞', '形容詞', '形容動詞', '副詞', '感動詞']`; `false` otherwise |
 
-`toHiragana`: convert katakana reading to hiragana. Kuromoji always returns readings in katakana.
+`toHiragana`: convert katakana reading to hiragana. Kuromoji always returns readings in katakana. This utility already exists in `lib/text-processing.ts`.
 
-### Graceful degradation (no API key)
+### Graceful degradation (no API key / config null)
 
-When `config` is `null` or `assignKanjiReadings` throws due to no API key, use Kuromoji's own reading as fallback for kanji tokens rather than failing the import:
-
-```ts
-const llmReadings = config
-  ? await assignKanjiReadings(config, needsLlm, signal).catch(() => null)
-  : null;
-
-// If llmReadings is null, use Kuromoji's katakana reading converted to hiragana for all tokens
-```
+When `config` is `null` or `assignKanjiReadings` throws, use Kuromoji's own reading converted to hiragana as fallback for kanji tokens rather than failing the import.
 
 ---
 
 ## 2. Add `getSentenceContext` helper (in `processImport.ts`)
 
-Returns the surrounding sentence text for a given token — pass as context to the LLM prompt:
+Returns the surrounding sentence text for a given token — passed as context to the LLM prompt:
 
 ```ts
 function getSentenceContext(
@@ -108,7 +100,7 @@ After re-parsing, prompt: "Run vocabulary cleanup to normalize any newly inserte
 
 ## 4. Tests — `__tests__/lib/processImport.test.ts` (new file)
 
-Mock both `lib/kuromoji` and `lib/llm` entirely. Do not hit the real tokenizer or LLM.
+`processImport` returns `void` and writes to the DB — tests must mock `@/lib/db` and assert on `query()` call arguments rather than on a return value.
 
 ```ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -119,12 +111,26 @@ vi.mock('@/lib/kuromoji', () => ({
 
 vi.mock('@/lib/llm', () => ({
   assignKanjiReadings: vi.fn(),
-  // keep other exports if imported by processImport
 }));
 
 vi.mock('@/lib/frequency', () => ({
   lookupFrequencyTier: vi.fn().mockResolvedValue(null),
 }));
+
+vi.mock('@/lib/db', () => ({
+  query: vi.fn().mockResolvedValue({ rows: [] }),
+}));
+
+vi.mock('@/lib/importAbortControllers', () => ({
+  registerImportAbort: vi.fn(),
+  unregisterImportAbort: vi.fn(),
+}));
+
+import { kuromojiTokenize } from '@/lib/kuromoji';
+import { assignKanjiReadings } from '@/lib/llm';
+import { lookupFrequencyTier } from '@/lib/frequency';
+import { query } from '@/lib/db';
+import { processImport } from '@/lib/processImport';
 ```
 
 Fixture token arrays — one pure-kana token and one kanji token:
@@ -147,23 +153,29 @@ const kanjiToken = {
 };
 ```
 
-Tests:
+Tests assert on the `query` mock to verify what surfaces, readings, and frequency tiers were written to the DB:
 
 ```ts
+function getInsertCall() {
+  // Find the query() call that does the words INSERT (contains 'INSERT INTO words')
+  return vi.mocked(query).mock.calls.find(([sql]) =>
+    typeof sql === 'string' && sql.includes('INSERT INTO words'),
+  );
+}
+
 it('kanji tokens are sent to assignKanjiReadings; pure-kana tokens are not', async () => {
   vi.mocked(kuromojiTokenize).mockResolvedValue([pureKanaToken, kanjiToken]);
   vi.mocked(assignKanjiReadings).mockResolvedValue([
     { surface: '食べた', surface_reading: 'たべた', dict_reading: 'たべる' },
   ]);
 
-  await processImport(/* config, text, ... */);
+  await processImport(1, 1, 'テスト', mockConfig);
 
   expect(assignKanjiReadings).toHaveBeenCalledWith(
     expect.anything(),
     expect.arrayContaining([expect.objectContaining({ surface: '食べた' })]),
     expect.anything(),
   );
-  // pure-kana should NOT be in the call
   expect(assignKanjiReadings).not.toHaveBeenCalledWith(
     expect.anything(),
     expect.arrayContaining([expect.objectContaining({ surface: 'です' })]),
@@ -171,41 +183,48 @@ it('kanji tokens are sent to assignKanjiReadings; pure-kana tokens are not', asy
   );
 });
 
-it('LLM readings merged into final Token[]', async () => {
+it('LLM readings written to DB', async () => {
   vi.mocked(kuromojiTokenize).mockResolvedValue([kanjiToken]);
   vi.mocked(assignKanjiReadings).mockResolvedValue([
     { surface: '食べた', surface_reading: 'たべた', dict_reading: 'たべる' },
   ]);
 
-  const tokens = await processImport(/* ... */);
+  await processImport(1, 1, 'テスト', mockConfig);
 
-  const tok = tokens.find((t) => t.surface === '食べた');
-  expect(tok?.reading).toBe('たべた');
-  expect(tok?.dict_reading).toBe('たべる');
+  const insertCall = getInsertCall();
+  expect(insertCall).toBeDefined();
+  const [, [, forms, readings]] = insertCall!;
+  expect(forms).toContain('食べる');
+  expect(readings).toContain('たべる');
 });
 
 it('frequency_tier populated on inserted words', async () => {
-  vi.mocked(lookupFrequencyTier).mockResolvedValue('common');
   vi.mocked(kuromojiTokenize).mockResolvedValue([kanjiToken]);
   vi.mocked(assignKanjiReadings).mockResolvedValue([
     { surface: '食べた', surface_reading: 'たべた', dict_reading: 'たべる' },
   ]);
+  vi.mocked(lookupFrequencyTier).mockResolvedValue('common');
 
-  const tokens = await processImport(/* ... */);
+  await processImport(1, 1, 'テスト', mockConfig);
 
-  const tok = tokens.find((t) => t.surface === '食べた');
-  expect(tok?.frequency_tier).toBe('common');
+  expect(lookupFrequencyTier).toHaveBeenCalledWith('食べる', 'たべる');
+  // verify frequency_tier column included in INSERT args
+  const insertCall = getInsertCall();
+  const [sql] = insertCall!;
+  expect(sql).toContain('frequency_tier');
 });
 
-it('graceful degradation: assignKanjiReadings throws → Kuromoji reading used', async () => {
+it('graceful degradation: assignKanjiReadings throws → Kuromoji reading used, import succeeds', async () => {
   vi.mocked(kuromojiTokenize).mockResolvedValue([kanjiToken]);
   vi.mocked(assignKanjiReadings).mockRejectedValue(new Error('no api key'));
 
-  const tokens = await processImport(/* config: null, ... */);
+  await expect(processImport(1, 1, 'テスト', mockConfig)).resolves.not.toThrow();
 
-  // Should not throw; kanji token gets katakana→hiragana fallback reading
-  const tok = tokens.find((t) => t.surface === '食べた');
-  expect(tok?.reading).toBe('たべた'); // toHiragana('タベタ')
+  const insertCall = getInsertCall();
+  expect(insertCall).toBeDefined();
+  // Fallback: toHiragana('タベタ') = 'たべた'
+  const [, [, , readings]] = insertCall!;
+  expect(readings).toContain('たべた');
 });
 ```
 

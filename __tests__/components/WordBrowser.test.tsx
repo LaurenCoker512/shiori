@@ -112,6 +112,25 @@ describe('WordBrowser', () => {
     });
   });
 
+  it('frequency tier filter change triggers refetch with frequency_tier query param', async () => {
+    const user = userEvent.setup();
+    mockFetch([makeWord()], 1);
+    renderWithProvider(<WordBrowser />);
+    await waitFor(() => screen.getByRole('combobox', { name: /frequency/i }));
+
+    mockFetch([makeWord()], 1);
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /frequency/i }),
+      'common',
+    );
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('frequency_tier=common'),
+      ),
+    );
+  });
+
   it('pagination previous button disabled on first page', async () => {
     mockFetch([makeWord()], 1);
 

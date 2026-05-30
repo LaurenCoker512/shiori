@@ -52,6 +52,8 @@ describeIfDb('PATCH /api/words/[id] — integration', () => {
     );
     const migration = readFileSync(join(process.cwd(), 'migrations/001_initial.sql'), 'utf-8');
     await testPool.query(migration);
+    const migration009 = readFileSync(join(process.cwd(), 'migrations/009_frequency.sql'), 'utf-8');
+    await testPool.query(migration009);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
     mockGetSession.mockResolvedValue(FAKE_USER);
@@ -161,6 +163,8 @@ describeIfDb('GET /api/words — integration', () => {
     );
     const migration = readFileSync(join(process.cwd(), 'migrations/001_initial.sql'), 'utf-8');
     await testPool.query(migration);
+    const migration009 = readFileSync(join(process.cwd(), 'migrations/009_frequency.sql'), 'utf-8');
+    await testPool.query(migration009);
     mockQuery.mockReset();
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
     mockGetSession.mockResolvedValue(FAKE_USER);
