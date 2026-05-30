@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WordBrowser } from '@/components/dashboard/WordBrowser';
+import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
 import type { Word } from '@/lib/types';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(
+    <KnownWordCountProvider initialCount={0}>{ui}</KnownWordCountProvider>,
+  );
+}
 
 function makeWord(overrides: Partial<Word> = {}): Word {
   return {
@@ -37,7 +44,7 @@ describe('WordBrowser', () => {
   it('fetches words on mount and renders them', async () => {
     mockFetch([makeWord()], 1);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(screen.getByText('猫')).toBeInTheDocument();
@@ -48,7 +55,7 @@ describe('WordBrowser', () => {
     vi.useFakeTimers();
     mockFetch([], 0);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     // Resolve the mount fetch
     await act(async () => { vi.runAllTimers(); });
@@ -74,7 +81,7 @@ describe('WordBrowser', () => {
     const user = userEvent.setup();
     mockFetch([], 0);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -91,7 +98,7 @@ describe('WordBrowser', () => {
     const user = userEvent.setup();
     mockFetch([], 0);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -107,7 +114,7 @@ describe('WordBrowser', () => {
   it('pagination previous button disabled on first page', async () => {
     mockFetch([makeWord()], 1);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(screen.getByText('猫')).toBeInTheDocument();
@@ -130,7 +137,7 @@ describe('WordBrowser', () => {
         Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })),
       );
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Edit translation for 猫')).toBeInTheDocument();
@@ -172,7 +179,7 @@ describe('WordBrowser', () => {
         )),
       );
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('Look up translation for 猫')).toBeInTheDocument();
@@ -191,7 +198,7 @@ describe('WordBrowser', () => {
     const word = makeWord({ user_translation: 'kitty', translation: '["cat","feline"]' });
     mockFetch([word], 1);
 
-    render(<WordBrowser />);
+    renderWithProvider(<WordBrowser />);
 
     await waitFor(() => {
       expect(screen.getByText('kitty')).toBeInTheDocument();

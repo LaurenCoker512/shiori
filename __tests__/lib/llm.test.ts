@@ -1,25 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LLMConfig } from '@/lib/llm';
 
-const mockCreate = vi.hoisted(() => vi.fn());
+export const anthropicCreate = vi.fn();
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(function () {
-    return { messages: { create: mockCreate } };
+    return { messages: { create: anthropicCreate } };
   }),
 }));
 
-import { tokenizeText, analyzeGrammar, describeGrammarPattern, translateWord } from '@/lib/llm';
+import { analyzeGrammar, describeGrammarPattern, translateWord, tokenizeText } from '@/lib/llm';
 
-const anthropicConfig: LLMConfig = { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' };
+const anthropicConfig: LLMConfig = { apiKey: 'sk-or-test', model: 'anthropic/claude-sonnet-4-6' };
+
+function mockFetch(content: string, status = 200) {
+  vi.spyOn(global, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({ choices: [{ message: { content } }] }),
+      { status },
+    ),
+  );
+}
 
 beforeEach(() => {
-  mockCreate.mockReset();
+  vi.restoreAllMocks();
 });
 
 describe('tokenizeText', () => {
   it('maps compact array-tuple response to ParsedContent', async () => {
-    // Compact format: array of sentences, each sentence is array of [surface, dict, reading, is_content]
     const compact = [
       [
         ['猫', '猫', 'ねこ', 'ねこ', 1],
@@ -29,10 +37,7 @@ describe('tokenizeText', () => {
         ['。', '。', '。', '。', 0],
       ],
     ];
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify(compact) }],
-      stop_reason: 'end_turn',
-    });
+    mockFetch(JSON.stringify(compact));
 
     const result = await tokenizeText(anthropicConfig, '猫が好きです。');
     expect(result).toHaveLength(1);
@@ -46,21 +51,16 @@ describe('tokenizeText', () => {
     expect(result[0].tokens[1].is_content_word).toBe(false);
   });
 
-  it('throws SyntaxError when mock returns invalid JSON', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: 'not valid json' }],
-      stop_reason: 'end_turn',
-    });
+  it('throws when mock returns invalid JSON', async () => {
+    mockFetch('no json here at all');
 
-    await expect(tokenizeText(anthropicConfig, 'テスト')).rejects.toThrow(SyntaxError);
+    await expect(tokenizeText(anthropicConfig, 'テスト')).rejects.toThrow();
   });
 });
 
 describe('analyzeGrammar', () => {
   it('returns empty array when mock returns []', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: '[]' }],
-    });
+    mockFetch('[]');
 
     const result = await analyzeGrammar(anthropicConfig, '猫です。');
     expect(result).toEqual([]);
@@ -71,9 +71,7 @@ describe('analyzeGrammar', () => {
       { pattern: '〜ていた', jlpt_level: 'N4' },
       { pattern: '〜ので', jlpt_level: 'N4' },
     ];
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify(patterns) }],
-    });
+    mockFetch(JSON.stringify(patterns));
 
     const result = await analyzeGrammar(anthropicConfig, '食べていたので疲れました。');
     expect(result).toHaveLength(2);
@@ -84,9 +82,7 @@ describe('analyzeGrammar', () => {
 
 describe('describeGrammarPattern', () => {
   it('returns trimmed string from mock response', async () => {
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: '  Expresses a past ongoing action.  ' }],
-    });
+    mockFetch('  Expresses a past ongoing action.  ');
 
     const result = await describeGrammarPattern(anthropicConfig, '〜ていた');
     expect(result).toBe('Expresses a past ongoing action.');
@@ -96,9 +92,7 @@ describe('describeGrammarPattern', () => {
 describe('translateWord', () => {
   it('returns TranslationResult when mock returns valid object', async () => {
     const payload = { translations: ['to eat', 'to consume'], jlpt_level: 'N5' };
-    mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify(payload) }],
-    });
+    mockFetch(JSON.stringify(payload));
 
     const result = await translateWord(anthropicConfig, '食べる', '私はりんごを食べる。');
     expect(result.translations).toEqual(['to eat', 'to consume']);

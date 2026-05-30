@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { WordToken } from '@/components/reader/WordToken';
 import { WordPopover } from '@/components/reader/WordPopover';
+import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
 import type { Token, Word } from '@/lib/types';
 
 const mockToken: Token = {
@@ -87,7 +88,11 @@ describe('WordToken + WordPopover integration', () => {
         new Response(JSON.stringify({ translations: ['cat'] }), { status: 200 }),
       );
 
-    const { container } = render(<WordTokenWithPopover initialWord={unseenWord} />);
+    const { container } = render(
+      <KnownWordCountProvider initialCount={0}>
+        <WordTokenWithPopover initialWord={unseenWord} />
+      </KnownWordCountProvider>,
+    );
     const ruby = container.querySelector('ruby')!;
 
     await user.click(ruby);
@@ -107,7 +112,11 @@ describe('WordToken + WordPopover integration', () => {
     const user = userEvent.setup();
     vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network error'));
 
-    const { container } = render(<WordTokenWithPopover initialWord={unseenWord} />);
+    const { container } = render(
+      <KnownWordCountProvider initialCount={0}>
+        <WordTokenWithPopover initialWord={unseenWord} />
+      </KnownWordCountProvider>,
+    );
     const ruby = container.querySelector('ruby')!;
 
     await user.click(ruby);

@@ -74,11 +74,11 @@ describe('WordToken', () => {
     expect(container.querySelector('rt')).toHaveClass('hidden');
   });
 
-  it('known word + showFurigana true → <rt> visible', () => {
+  it('known word + showFurigana true → <rt> hidden (known words suppress furigana)', () => {
     const { container } = render(
       <WordToken token={contentToken} word={makeWord('known')} furiganaOverride={null} showFurigana={true} />,
     );
-    expect(container.querySelector('rt')).not.toHaveClass('hidden');
+    expect(container.querySelector('rt')).toHaveClass('hidden');
   });
 
   it('furigana override applied when provided', () => {

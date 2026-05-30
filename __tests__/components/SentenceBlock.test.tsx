@@ -80,11 +80,9 @@ describe('SentenceBlock', () => {
     expect(container.querySelector('[data-grammar-trigger]')).not.toBeInTheDocument();
   });
 
-  it('clicking sentence shows confirmation prompt', async () => {
+  it('clicking non-word area calls onSentenceClick with sentence index', async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
-    );
+    const onSentenceClick = vi.fn();
 
     const { container } = render(
       <SentenceBlock
@@ -92,23 +90,18 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
+        onSentenceClick={onSentenceClick}
       />,
     );
 
-    const paragraph = container.querySelector('[data-grammar-trigger]')!;
+    const paragraph = container.querySelector('p')!;
     await user.click(paragraph);
 
-    expect(screen.getByText(/Analyze grammar for this sentence\?/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(onSentenceClick).toHaveBeenCalledWith(1);
   });
 
-  it('clicking Analyze in the prompt triggers grammar fetch', async () => {
+  it('clicking non-word area does not call onSentenceClick when not provided', async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
-    );
 
     const { container } = render(
       <SentenceBlock
@@ -119,19 +112,13 @@ describe('SentenceBlock', () => {
       />,
     );
 
-    await user.click(container.querySelector('[data-grammar-trigger]')!);
-    await user.click(screen.getByRole('button', { name: 'Analyze' }));
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/sentences/1/1/grammar');
-    });
+    // Should not throw when onSentenceClick is undefined
+    await user.click(container.querySelector('p')!);
   });
 
-  it('clicking Cancel dismisses the prompt without fetching', async () => {
+  it('isActiveGrammarSentence=true suppresses onSentenceClick on p click', async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
-    );
+    const onSentenceClick = vi.fn();
 
     const { container } = render(
       <SentenceBlock
@@ -139,46 +126,18 @@ describe('SentenceBlock', () => {
         wordStatusMap={{}}
         furiganaOverrides={{}}
         showFurigana={true}
+        onSentenceClick={onSentenceClick}
+        isActiveGrammarSentence={true}
       />,
     );
 
-    await user.click(container.querySelector('[data-grammar-trigger]')!);
-    expect(screen.getByText(/Analyze grammar for this sentence\?/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByText(/Analyze grammar for this sentence\?/)).not.toBeInTheDocument();
-    expect(global.fetch).not.toHaveBeenCalled();
+    await user.click(container.querySelector('p')!);
+    expect(onSentenceClick).not.toHaveBeenCalled();
   });
 
-  it('after patterns are fetched and hidden, prompt offers to show instead of analyze', async () => {
+  it('clicking [data-word] child does not call onSentenceClick', async () => {
     const user = userEvent.setup();
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ patterns: [] }), { status: 200 }),
-    );
-
-    const { container } = render(
-      <SentenceBlock
-        sentence={bodySentence}
-        wordStatusMap={{}}
-        furiganaOverrides={{}}
-        showFurigana={true}
-      />,
-    );
-
-    // Fetch and then hide
-    await user.click(container.querySelector('[data-grammar-trigger]')!);
-    await user.click(screen.getByRole('button', { name: 'Analyze' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Hide grammar analysis' })).toBeInTheDocument());
-    await user.click(screen.getByRole('button', { name: 'Hide grammar analysis' }));
-
-    // Re-click sentence: should now show 'Show grammar analysis?' prompt
-    await user.click(container.querySelector('[data-grammar-trigger]')!);
-    expect(screen.getByText(/Show grammar analysis\?/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument();
-  });
-
-  it('clicking [data-word] child does not show prompt', async () => {
-    const user = userEvent.setup();
+    const onSentenceClick = vi.fn();
 
     const { container } = render(
       <SentenceBlock
@@ -186,12 +145,14 @@ describe('SentenceBlock', () => {
         wordStatusMap={{ 'テスト|テスト': mockWord }}
         furiganaOverrides={{}}
         showFurigana={true}
+        onSentenceClick={onSentenceClick}
       />,
     );
 
     const wordEl = container.querySelector('[data-word]')!;
     await user.click(wordEl);
 
-    expect(screen.queryByText(/Analyze grammar/)).not.toBeInTheDocument();
+    expect(onSentenceClick).not.toHaveBeenCalled();
   });
+
 });

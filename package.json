@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
+    "@birchill/jpdict-idb": "^3.3.0",
     "@types/bcryptjs": "^2.4.6",
     "@vercel/functions": "^3.5.1",
     "bcryptjs": "^3.0.3",

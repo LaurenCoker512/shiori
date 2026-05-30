@@ -75,6 +75,7 @@ describe('POST /api/tts', () => {
       'こんにちは',
       'ja-JP-Neural2-B',
       1.0,
+      'text',
     );
 
     const buf = await response.arrayBuffer();
@@ -92,6 +93,7 @@ describe('POST /api/tts', () => {
       'テスト',
       expect.anything(),
       expect.anything(),
+      'text',
     );
   });
 

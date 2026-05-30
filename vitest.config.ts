@@ -12,6 +12,7 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       TEST_DATABASE_URL: 'postgresql://localhost/shiori_test',
+      DATABASE_URL: 'postgresql://localhost/shiori_test',
     },
   },
   resolve: {

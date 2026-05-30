@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WordPopover } from '@/components/reader/WordPopover';
+import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
 import type { Word } from '@/lib/types';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(
+    <KnownWordCountProvider initialCount={0}>{ui}</KnownWordCountProvider>,
+  );
+}
 
 function makeWord(overrides: Partial<Word> = {}): Word {
   return {
@@ -32,7 +39,7 @@ describe('WordPopover', () => {
   });
 
   it('shows translation text', () => {
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ status: 'unseen', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -44,7 +51,7 @@ describe('WordPopover', () => {
   });
 
   it('shows three status buttons: New, Seen, Known', () => {
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -58,7 +65,7 @@ describe('WordPopover', () => {
   });
 
   it('known word: shows translation, status buttons present', () => {
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ status: 'known', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -71,7 +78,7 @@ describe('WordPopover', () => {
   });
 
   it('user_translation set → shown primary with pencil icon aria-label="Custom translation"', () => {
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ user_translation: 'my cat', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -84,7 +91,7 @@ describe('WordPopover', () => {
   });
 
   it('no user_translation → shows parseTranslations output', () => {
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ user_translation: null, translation: '["cat","feline"]' })}
         anchorRect={mockAnchorRect}
@@ -97,7 +104,7 @@ describe('WordPopover', () => {
 
   it('aria-live="polite" region present while loading', () => {
     vi.spyOn(global, 'fetch').mockReturnValue(new Promise(() => {}));
-    const { container } = render(
+    const { container } = renderWithProvider(
       <WordPopover
         word={makeWord({ translation: null, user_translation: null })}
         anchorRect={mockAnchorRect}
@@ -117,7 +124,7 @@ describe('WordPopover', () => {
       new Response(JSON.stringify(updatedWord), { status: 200 }),
     );
 
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ status: 'seen', translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -140,7 +147,7 @@ describe('WordPopover', () => {
   it('Escape key closes popover', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(
+    renderWithProvider(
       <WordPopover
         word={makeWord({ translation: '["cat"]' })}
         anchorRect={mockAnchorRect}
@@ -155,7 +162,7 @@ describe('WordPopover', () => {
   it('click outside closes popover', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(
+    renderWithProvider(
       <div>
         <button type="button">outside</button>
         <WordPopover

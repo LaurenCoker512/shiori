@@ -68,10 +68,10 @@ export function GrammarTooltip({
         <button
           className="font-en text-[11px]"
           style={{ color: 'var(--yg-ink-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-          aria-label="Close grammar analysis"
+          aria-label="Hide grammar analysis"
           onClick={onClose}
         >
-          Close
+          Hide
         </button>
       </div>
       <div className="overflow-y-auto px-5 py-4" style={{ maxHeight: 'calc(100vh - 48px - 44px)' }}>

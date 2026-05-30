@@ -54,6 +54,18 @@ export interface FuriganaOverride {
   corrected_reading: string;
 }
 
+export interface JMdictSense {
+  pos: string[];
+  glosses: string[];
+  info?: string;
+}
+
+export interface JMdictEntry {
+  id: number;
+  senses: JMdictSense[];
+  jlpt_level: JlptLevel | null;
+}
+
 export function parseTranslations(translation: string | null): string[] {
   if (!translation) return [];
   try {
