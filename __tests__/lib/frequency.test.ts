@@ -1,11 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { promises as fs } from 'fs';
-import { lookupFrequencyTier, _resetCacheForTesting } from '@/lib/frequency';
+import { lookupFrequencyTier, rankToTier, _resetCacheForTesting } from '@/lib/frequency';
 
-function setupFixture(jpdb: Record<string, number>, jpdbByEntry: Record<string, number> = {}) {
+// jpdb.json format: { headword: [[reading | null, rank], ...] }
+// jpdb-by-entry.json format: { id: { rank, headword, reading, canonical } }
+const fixtureSurface = {
+  '猫': [['ねこ', 800]],
+  '犬': [['いぬ', 1600]],
+};
+const fixtureByEntry = {
+  '12345': { rank: 400, headword: '食べる', reading: 'たべる', canonical: '食べる' },
+};
+
+function setupFixture(
+  surface: Record<string, Array<[string | null, number]>> = fixtureSurface,
+  byEntry: Record<string, { rank: number; headword: string; reading: string | null; canonical: string }> = fixtureByEntry,
+) {
   vi.spyOn(fs, 'readFile')
-    .mockResolvedValueOnce(JSON.stringify(jpdb) as unknown as Buffer)
-    .mockResolvedValueOnce(JSON.stringify(jpdbByEntry) as unknown as Buffer);
+    .mockResolvedValueOnce(JSON.stringify(surface) as unknown as Buffer)
+    .mockResolvedValueOnce(JSON.stringify(byEntry) as unknown as Buffer);
 }
 
 beforeEach(() => {
@@ -13,24 +26,9 @@ beforeEach(() => {
   _resetCacheForTesting();
 });
 
-describe('lookupFrequencyTier', () => {
-  it('entry-keyed hit → very-common (rank 400)', async () => {
-    setupFixture({ '猫': 800 }, { '食べる|たべる': 400 });
-    expect(await lookupFrequencyTier('食べる', 'たべる')).toBe('very-common');
-  });
-
-  it('entry miss, surface hit → common (rank 1600)', async () => {
-    setupFixture({ '犬': 1600 });
-    expect(await lookupFrequencyTier('犬', 'いぬ')).toBe('common');
-  });
-
-  it('both miss → null', async () => {
-    setupFixture({ '猫': 800 });
-    expect(await lookupFrequencyTier('謎語', 'なぞご')).toBeNull();
-  });
-
-  it('tier boundaries', async () => {
-    const boundaries: [number, string][] = [
+describe('rankToTier', () => {
+  it('tier boundaries', () => {
+    const cases: [number, string][] = [
       [1500, 'very-common'],
       [1501, 'common'],
       [5000, 'common'],
@@ -40,12 +38,31 @@ describe('lookupFrequencyTier', () => {
       [30000, 'rare'],
       [30001, 'very-rare'],
     ];
-
-    for (const [rank, expected] of boundaries) {
-      vi.restoreAllMocks();
-      _resetCacheForTesting();
-      setupFixture({ 'テスト': rank });
-      expect(await lookupFrequencyTier('テスト', 'てすと'), `rank ${rank}`).toBe(expected);
+    for (const [rank, expected] of cases) {
+      expect(rankToTier(rank), `rank ${rank}`).toBe(expected);
     }
+  });
+});
+
+describe('lookupFrequencyTier', () => {
+  it('entry-keyed hit → very-common (rank 400)', async () => {
+    setupFixture();
+    expect(await lookupFrequencyTier('食べる', 'たべる')).toBe('very-common');
+  });
+
+  it('entry miss, surface hit with reading match → very-common (rank 800)', async () => {
+    setupFixture();
+    expect(await lookupFrequencyTier('猫', 'ねこ')).toBe('very-common');
+  });
+
+  it('entry miss, surface hit no reading match → uses first entry rank', async () => {
+    setupFixture();
+    // 犬 rank 1600 → common; reading 'inu' doesn't match 'いぬ' so falls to entries[0]
+    expect(await lookupFrequencyTier('犬', 'inu')).toBe('common');
+  });
+
+  it('both miss → null', async () => {
+    setupFixture();
+    expect(await lookupFrequencyTier('謎語', 'なぞご')).toBeNull();
   });
 });
