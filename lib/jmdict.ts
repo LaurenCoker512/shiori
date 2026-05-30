@@ -16,7 +16,8 @@ function buildEntry(
     glosses: s.g.slice(0, 3).map((g) => g.str),
     info: s.inf ?? undefined,
   }));
-  return { id: entry.id, senses, jlpt_level: jlptLevel(dictionaryForm) };
+  const canonicalForm = entry.k?.[0]?.ent ?? entry.r[0]?.ent ?? dictionaryForm;
+  return { id: entry.id, senses, jlpt_level: jlptLevel(dictionaryForm), canonicalForm };
 }
 
 export async function lookupWord(

@@ -66,6 +66,7 @@ export interface JMdictEntry {
   id: number;
   senses: JMdictSense[];
   jlpt_level: JlptLevel | null;
+  canonicalForm: string;
   derivationChain?: string[];
 }
 

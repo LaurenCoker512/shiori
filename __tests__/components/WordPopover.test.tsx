@@ -187,6 +187,7 @@ describe('WordPopover', () => {
     vi.mocked(lookupWord).mockResolvedValue({
       id: 1,
       jlpt_level: 'N5',
+      canonicalForm: '猫',
       senses: [{ pos: ['n'], glosses: ['cat', 'feline'], info: undefined }],
     });
     renderWithProvider(
@@ -205,6 +206,7 @@ describe('WordPopover', () => {
     vi.mocked(lookupWord).mockResolvedValue({
       id: 2,
       jlpt_level: null,
+      canonicalForm: '上',
       senses: [
         { pos: ['n'], glosses: ['upper', 'top'] },
         { pos: ['v1'], glosses: ['to go up'] },
@@ -243,6 +245,7 @@ describe('WordPopover', () => {
     vi.mocked(lookupWord).mockResolvedValue({
       id: 3,
       jlpt_level: null,
+      canonicalForm: '食べる',
       senses: [{ pos: ['v1'], glosses: ['to eat'] }],
       derivationChain: ['passive', 'polite', 'past'],
     });

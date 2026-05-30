@@ -46,6 +46,7 @@ describe('lookupWord', () => {
       id: 1,
       senses: [{ pos: ['n'], glosses: ['cat', 'kitty', 'feline'], info: undefined }],
       jlpt_level: 'N5',
+      canonicalForm: '猫',
     });
   });
 

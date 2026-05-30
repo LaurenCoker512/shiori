@@ -4,6 +4,7 @@ import { ApiKeyForm } from '@/components/settings/ApiKeyForm';
 import { ProfileForm } from '@/components/settings/ProfileForm';
 import { TagManager } from '@/components/settings/TagManager';
 import { TTSForm } from '@/components/settings/TTSForm';
+import { VocabularyActions } from '@/components/settings/VocabularyActions';
 
 export default async function SettingsPage() {
   const user = await getSession();
@@ -55,6 +56,13 @@ export default async function SettingsPage() {
       </div>
 
       <TagManager />
+
+      <div
+        className="rounded-2xl px-7 py-6 border mb-4"
+        style={{ background: 'var(--yg-paper-hi)', borderColor: 'var(--yg-rule)' }}
+      >
+        <VocabularyActions />
+      </div>
     </main>
   );
 }
