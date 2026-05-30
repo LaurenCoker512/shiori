@@ -1,20 +1,19 @@
 import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
-import { tokenizeText, buildLLMConfig } from '@/lib/llm';
+import { buildLLMConfig } from '@/lib/llm';
+import { buildParsedContent } from '@/lib/processImport';
+import { kuromojiTokenize } from '@/lib/kuromoji';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { jsonResponse } from '@/lib/api';
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } },
 ): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const llmConfig = buildLLMConfig(user);
-  if (llmConfig === null) {
-    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
-  }
 
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return jsonResponse({ error: 'Invalid id' }, 400);
@@ -33,8 +32,9 @@ export async function POST(
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n');
 
-  const tokenized = await tokenizeText(llmConfig, cleanedText);
-  const parsedContent = parseHeadingSentinels(tokenized);
+  const kuroTokens = await kuromojiTokenize(cleanedText);
+  const sentences = await buildParsedContent(kuroTokens, llmConfig);
+  const parsedContent = parseHeadingSentinels(sentences);
 
   await query(
     'UPDATE texts SET parsed_content = $1 WHERE id = $2',

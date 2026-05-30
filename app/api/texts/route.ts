@@ -7,14 +7,21 @@ import { buildLLMConfig } from '@/lib/llm';
 import { processImport } from '@/lib/processImport';
 import { jsonResponse } from '@/lib/api';
 
-export async function POST(request: Request): Promise<Response> {
+export async function GET(): Promise<Response> {
   const user = await getSession();
   if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const llmConfig = buildLLMConfig(user);
-  if (llmConfig === null) {
-    return jsonResponse({ error: 'API key not configured. Add your key in Settings.' }, 403);
-  }
+  const result = await query<{ id: number; title: string }>(
+    'SELECT id, title FROM texts WHERE user_id = $1 ORDER BY id DESC',
+    [user.id],
+  );
+
+  return jsonResponse({ texts: result.rows });
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const user = await getSession();
+  if (user === null) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const body = await request.json() as {
     title?: string;
@@ -30,6 +37,8 @@ export async function POST(request: Request): Promise<Response> {
   if (content.length > 500_000) {
     return jsonResponse({ error: 'Content must be 500 KB or less' }, 413);
   }
+
+  const llmConfig = buildLLMConfig(user);
 
   const textResult = await query<{ id: number }>(
     `INSERT INTO texts (user_id, title, raw_content, parsed_content, import_status)

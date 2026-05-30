@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import type { IpadicFeatures } from '@patdx/kuromoji';
 
-const mockTokenizeText = vi.hoisted(() => vi.fn());
+const mockKuromojiTokenize = vi.hoisted(() => vi.fn());
+const mockAssignKanjiReadings = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
 const mockGetSession = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/kuromoji', () => ({ kuromojiTokenize: mockKuromojiTokenize }));
 vi.mock('@/lib/llm', () => ({
-  tokenizeText: mockTokenizeText,
+  assignKanjiReadings: mockAssignKanjiReadings,
   buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })),
 }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
@@ -16,7 +19,6 @@ vi.mock('@/lib/session', () => ({ getSession: mockGetSession }));
 vi.mock('@/lib/frequency', () => ({ lookupFrequencyTier: vi.fn().mockResolvedValue(null) }));
 
 import { POST } from '@/app/api/texts/route';
-import type { ParsedContent } from '@/lib/types';
 import type { SessionUser } from '@/lib/session';
 
 const FAKE_USER: SessionUser = {
@@ -35,18 +37,17 @@ function makeRequest(body: object): Request {
   });
 }
 
-const sampleParsedContent: ParsedContent = [
-  {
-    sentence_index: 0,
-    raw: '猫が好きです。',
-    tokens: [
-      { surface: '猫', dictionary_form: '猫', reading: 'ねこ', dict_reading: 'ねこ', is_content_word: true },
-      { surface: 'が', dictionary_form: 'が', reading: 'が', dict_reading: 'が', is_content_word: false },
-      { surface: '好き', dictionary_form: '好き', reading: 'すき', dict_reading: 'すき', is_content_word: true },
-      { surface: 'です', dictionary_form: 'です', reading: 'です', dict_reading: 'です', is_content_word: false },
-      { surface: '。', dictionary_form: '。', reading: '。', dict_reading: '。', is_content_word: false },
-    ],
-  },
+// IpadicFeatures fixtures representing '猫が好きです。'
+const nekoToken = { surface_form: '猫', basic_form: '猫', reading: 'ネコ', word_type: 'KNOWN', pos: '名詞' } as unknown as IpadicFeatures;
+const gaToken = { surface_form: 'が', basic_form: 'が', reading: 'ガ', word_type: 'KNOWN', pos: '助詞' } as unknown as IpadicFeatures;
+const sukiToken = { surface_form: '好き', basic_form: '好き', reading: 'スキ', word_type: 'KNOWN', pos: '名詞' } as unknown as IpadicFeatures;
+const desuToken = { surface_form: 'です', basic_form: 'です', reading: 'デス', word_type: 'KNOWN', pos: '助動詞' } as unknown as IpadicFeatures;
+const periodToken = { surface_form: '。', basic_form: '。', reading: '。', word_type: 'KNOWN', pos: '記号' } as unknown as IpadicFeatures;
+
+const sampleTokens = [nekoToken, gaToken, sukiToken, desuToken, periodToken];
+const sampleLlmReadings = [
+  { surface: '猫', surface_reading: 'ねこ', dict_reading: 'ねこ' },
+  { surface: '好き', surface_reading: 'すき', dict_reading: 'すき' },
 ];
 
 describeIfDb('POST /api/texts — integration', () => {
@@ -70,7 +71,8 @@ describeIfDb('POST /api/texts — integration', () => {
 
   afterEach(async () => {
     await testPool.query('TRUNCATE TABLE sentence_patterns, words, texts RESTART IDENTITY CASCADE');
-    mockTokenizeText.mockReset();
+    mockKuromojiTokenize.mockReset();
+    mockAssignKanjiReadings.mockReset();
   });
 
   afterAll(async () => {
@@ -88,7 +90,8 @@ describeIfDb('POST /api/texts — integration', () => {
   });
 
   it('inserts text and words for valid content, returns { id }', async () => {
-    mockTokenizeText.mockResolvedValue(sampleParsedContent);
+    mockKuromojiTokenize.mockResolvedValue(sampleTokens);
+    mockAssignKanjiReadings.mockResolvedValue(sampleLlmReadings);
 
     const response = await POST(makeRequest({ title: '猫の話', content: '猫が好きです。' }));
     expect(response.status).toBe(202);
@@ -110,7 +113,7 @@ describeIfDb('POST /api/texts — integration', () => {
   });
 
   it('returns 202 immediately even when tokenizer later throws; no words inserted', async () => {
-    mockTokenizeText.mockRejectedValue(new Error('API error'));
+    mockKuromojiTokenize.mockRejectedValue(new Error('tokenizer error'));
 
     const response = await POST(makeRequest({ title: 'Error Test', content: '猫が好きです。' }));
     expect(response.status).toBe(202);
@@ -125,20 +128,15 @@ describeIfDb('POST /api/texts — integration', () => {
   });
 
   it('upserts duplicate words without error or duplication', async () => {
-    const contentWithDupe: ParsedContent = [
-      {
-        sentence_index: 0,
-        raw: '猫が猫です。',
-        tokens: [
-          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', dict_reading: 'ねこ', is_content_word: true },
-          { surface: 'が', dictionary_form: 'が', reading: 'が', dict_reading: 'が', is_content_word: false },
-          { surface: '猫', dictionary_form: '猫', reading: 'ねこ', dict_reading: 'ねこ', is_content_word: true },
-          { surface: 'です', dictionary_form: 'です', reading: 'です', dict_reading: 'です', is_content_word: false },
-          { surface: '。', dictionary_form: '。', reading: '。', dict_reading: '。', is_content_word: false },
-        ],
-      },
+    const nekoToken2 = { surface_form: '猫', basic_form: '猫', reading: 'ネコ', word_type: 'KNOWN', pos: '名詞' } as unknown as IpadicFeatures;
+    const dupeTokens = [nekoToken, gaToken, nekoToken2, desuToken, periodToken];
+    const dupeLlmReadings = [
+      { surface: '猫', surface_reading: 'ねこ', dict_reading: 'ねこ' },
+      { surface: '猫', surface_reading: 'ねこ', dict_reading: 'ねこ' },
     ];
-    mockTokenizeText.mockResolvedValue(contentWithDupe);
+
+    mockKuromojiTokenize.mockResolvedValue(dupeTokens);
+    mockAssignKanjiReadings.mockResolvedValue(dupeLlmReadings);
 
     const response = await POST(makeRequest({ title: '猫テスト', content: '猫が猫です。' }));
     expect(response.status).toBe(202);

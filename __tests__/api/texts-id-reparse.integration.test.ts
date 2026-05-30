@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import type { IpadicFeatures } from '@patdx/kuromoji';
 
-const mockTokenizeText = vi.hoisted(() => vi.fn());
+const mockKuromojiTokenize = vi.hoisted(() => vi.fn());
+const mockAssignKanjiReadings = vi.hoisted(() => vi.fn());
 const mockQuery = vi.hoisted(() => vi.fn());
 const mockGetSession = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/kuromoji', () => ({ kuromojiTokenize: mockKuromojiTokenize }));
 vi.mock('@/lib/llm', () => ({
-  tokenizeText: mockTokenizeText,
+  assignKanjiReadings: mockAssignKanjiReadings,
   buildLLMConfig: vi.fn(() => ({ apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' })),
 }));
 vi.mock('@/lib/db', () => ({ query: mockQuery }));
@@ -43,15 +46,17 @@ const originalParsed: ParsedContent = [
   },
 ];
 
-const newParsed: ParsedContent = [
-  {
-    sentence_index: 0,
-    raw: '犬が走ります。',
-    tokens: [
-      { surface: '犬', dictionary_form: '犬', reading: 'いぬ', dict_reading: 'いぬ', is_content_word: true },
-      { surface: '走り', dictionary_form: '走る', reading: 'はしり', dict_reading: 'はしる', is_content_word: true },
-    ],
-  },
+// IpadicFeatures fixtures representing '犬が走ります。'
+const inuToken = { surface_form: '犬', basic_form: '犬', reading: 'イヌ', word_type: 'KNOWN', pos: '名詞' } as unknown as IpadicFeatures;
+const gaToken = { surface_form: 'が', basic_form: 'が', reading: 'ガ', word_type: 'KNOWN', pos: '助詞' } as unknown as IpadicFeatures;
+const hashiriToken = { surface_form: '走り', basic_form: '走る', reading: 'ハシリ', word_type: 'KNOWN', pos: '動詞' } as unknown as IpadicFeatures;
+const masuToken = { surface_form: 'ます', basic_form: 'ます', reading: 'マス', word_type: 'KNOWN', pos: '助動詞' } as unknown as IpadicFeatures;
+const periodToken = { surface_form: '。', basic_form: '。', reading: '。', word_type: 'KNOWN', pos: '記号' } as unknown as IpadicFeatures;
+
+const newTokens = [inuToken, gaToken, hashiriToken, masuToken, periodToken];
+const newLlmReadings = [
+  { surface: '犬', surface_reading: 'いぬ', dict_reading: 'いぬ' },
+  { surface: '走り', surface_reading: 'はしり', dict_reading: 'はしる' },
 ];
 
 describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
@@ -68,7 +73,6 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
     mockQuery.mockImplementation((sql: string, params?: unknown[]) => testPool.query(sql, params));
     mockGetSession.mockResolvedValue({
       id: 1, name: 'Test', email: 'test@example.com',
-      
       openrouter_api_key: null, openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
     });
   });
@@ -77,7 +81,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
     await testPool.query(
       'TRUNCATE TABLE sentence_patterns, furigana_overrides, grammar_patterns, words, texts RESTART IDENTITY CASCADE',
     );
-    mockTokenizeText.mockReset();
+    mockKuromojiTokenize.mockReset();
+    mockAssignKanjiReadings.mockReset();
   });
 
   afterAll(async () => {
@@ -97,7 +102,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
 
   it('re-tokenizes raw content, updates parsed_content, and returns { ok: true }', async () => {
     const textId = await seedText();
-    mockTokenizeText.mockResolvedValue(newParsed);
+    mockKuromojiTokenize.mockResolvedValue(newTokens);
+    mockAssignKanjiReadings.mockResolvedValue(newLlmReadings);
 
     const response = await POST(makeRequest(), makeParams(String(textId)));
     expect(response.status).toBe(200);
@@ -117,7 +123,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
       'INSERT INTO sentence_patterns (text_id, sentence_index) VALUES ($1, 0)',
       [textId],
     );
-    mockTokenizeText.mockResolvedValue(newParsed);
+    mockKuromojiTokenize.mockResolvedValue(newTokens);
+    mockAssignKanjiReadings.mockResolvedValue(newLlmReadings);
 
     await POST(makeRequest(), makeParams(String(textId)));
 
@@ -137,7 +144,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
       `INSERT INTO furigana_overrides (user_id, word_id, surface_form, corrected_reading) VALUES (1, $1, '猫', 'ねこ')`,
       [wordResult.rows[0].id],
     );
-    mockTokenizeText.mockResolvedValue(newParsed);
+    mockKuromojiTokenize.mockResolvedValue(newTokens);
+    mockAssignKanjiReadings.mockResolvedValue(newLlmReadings);
 
     await POST(makeRequest(), makeParams(String(textId)));
 
@@ -156,7 +164,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
       `INSERT INTO furigana_overrides (user_id, word_id, surface_form, corrected_reading) VALUES (1, $1, '犬', 'いぬ')`,
       [wordResult.rows[0].id],
     );
-    mockTokenizeText.mockResolvedValue(newParsed);
+    mockKuromojiTokenize.mockResolvedValue(newTokens);
+    mockAssignKanjiReadings.mockResolvedValue(newLlmReadings);
 
     await POST(makeRequest(), makeParams(String(textId)));
 
@@ -168,7 +177,8 @@ describeIfDb('POST /api/texts/[id]/reparse — integration', () => {
 
   it('upserts new content words into the words table', async () => {
     const textId = await seedText();
-    mockTokenizeText.mockResolvedValue(newParsed);
+    mockKuromojiTokenize.mockResolvedValue(newTokens);
+    mockAssignKanjiReadings.mockResolvedValue(newLlmReadings);
 
     await POST(makeRequest(), makeParams(String(textId)));
 
