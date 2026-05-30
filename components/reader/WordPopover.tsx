@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Word } from '@/lib/types';
+import type { JMdictEntry, Word } from '@/lib/types';
 import { parseTranslations } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
 import { useKnownWordCount } from '@/components/ui/KnownWordCountContext';
+import { lookupWord } from '@/lib/jmdict';
 
 interface WordPopoverProps {
   word: Word;
@@ -16,18 +17,42 @@ interface WordPopoverProps {
   onFuriganaEdit?: (surface: string, newReading: string) => void;
 }
 
+type TranslationState =
+  | { kind: 'loading' }
+  | { kind: 'jmdict'; entry: JMdictEntry }
+  | { kind: 'llm'; translations: string[] }
+  | { kind: 'no-api-key' }
+  | { kind: 'error' };
+
 const STATUS_OPTS = [
   { id: 'unseen' as const, label: 'New',   jp: '未習' },
   { id: 'seen'   as const, label: 'Seen',  jp: '見た' },
   { id: 'known'  as const, label: 'Known', jp: '既習' },
 ];
 
+function JMdictDisplay({ entry }: { entry: JMdictEntry }) {
+  const hasMultiplePos = new Set(entry.senses.flatMap((s) => s.pos)).size > 1;
+
+  return (
+    <div>
+      {entry.senses.map((sense, i) => (
+        <div key={i}>
+          {hasMultiplePos && sense.pos.length > 0 && (
+            <span className="text-xs text-muted-foreground">{sense.pos.join(', ')}</span>
+          )}
+          <p>{sense.glosses.join('; ')}</p>
+          {sense.info !== undefined && (
+            <span className="text-xs text-muted-foreground">{sense.info}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function WordPopover({ word, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
   const { adjustKnownWordCount } = useKnownWordCount();
-  const [loadedTranslations, setLoadedTranslations] = useState<string[] | null>(null);
-  const [translationLoading, setTranslationLoading] = useState(
-    word.translation === null && word.user_translation === null,
-  );
+  const [translationState, setTranslationState] = useState<TranslationState | null>(null);
   const [markingStatus, setMarkingStatus] = useState(false);
   const [furiganaInput, setFuriganaInput] = useState(currentFurigana ?? '');
   const [savingFurigana, setSavingFurigana] = useState(false);
@@ -35,14 +60,40 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
 
   useEffect(() => {
     if (word.translation !== null || word.user_translation !== null) return;
-    fetch(`/api/words/${word.id}/translation`)
-      .then(r => r.json())
-      .then((data: { translations?: string[] }) => {
-        if (Array.isArray(data.translations)) setLoadedTranslations(data.translations);
-        setTranslationLoading(false);
-      })
-      .catch(() => setTranslationLoading(false));
-  }, [word.id, word.translation, word.user_translation]);
+
+    setTranslationState({ kind: 'loading' });
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const entry = await lookupWord(word.dictionary_form, word.reading);
+        if (cancelled) return;
+
+        if (entry) {
+          setTranslationState({ kind: 'jmdict', entry });
+          return;
+        }
+
+        const res = await fetch(`/api/words/${word.id}/translation`);
+        if (cancelled) return;
+
+        if (res.status === 403) {
+          setTranslationState({ kind: 'no-api-key' });
+          return;
+        }
+        if (!res.ok) {
+          setTranslationState({ kind: 'error' });
+          return;
+        }
+        const data = await res.json();
+        setTranslationState({ kind: 'llm', translations: data.translations });
+      } catch {
+        if (!cancelled) setTranslationState({ kind: 'error' });
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [word.id, word.dictionary_form, word.reading, word.translation, word.user_translation]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -91,15 +142,6 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
     setSavingFurigana(false);
     onFuriganaEdit(surface, furiganaInput);
   }
-
-  const translationText =
-    word.user_translation !== null
-      ? null
-      : word.translation !== null
-        ? parseTranslations(word.translation).join(' / ')
-        : loadedTranslations !== null
-          ? loadedTranslations.join(' / ')
-          : null;
 
   const statusBadgeStyle: React.CSSProperties = word.status === 'known'
     ? { background: 'var(--yg-known)', color: 'var(--yg-bamboo-dark)' }
@@ -178,16 +220,24 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
             Meaning
           </div>
           <div aria-live="polite" aria-atomic="true" className="font-en text-[15px] leading-relaxed" style={{ color: 'var(--yg-ink)' }}>
-            {translationLoading ? (
-              <Spinner />
-            ) : word.user_translation !== null ? (
+            {word.user_translation !== null ? (
               <>
                 <span role="img" aria-label="Custom translation">✏️</span>
                 {' '}{word.user_translation}
               </>
-            ) : (
-              translationText ?? <span style={{ color: 'var(--yg-ink-muted)' }}>No translation available</span>
-            )}
+            ) : word.translation !== null ? (
+              parseTranslations(word.translation).join(' / ')
+            ) : translationState?.kind === 'loading' ? (
+              <Spinner />
+            ) : translationState?.kind === 'jmdict' ? (
+              <JMdictDisplay entry={translationState.entry} />
+            ) : translationState?.kind === 'llm' ? (
+              translationState.translations.join(' / ')
+            ) : translationState?.kind === 'no-api-key' ? (
+              <p>Add an OpenRouter key in Settings to look up proper nouns and rare words.</p>
+            ) : translationState?.kind === 'error' ? (
+              <span style={{ color: 'var(--yg-ink-muted)' }}>No translation available</span>
+            ) : null}
           </div>
         </div>
 

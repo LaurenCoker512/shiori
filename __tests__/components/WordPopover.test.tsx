@@ -3,7 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WordPopover } from '@/components/reader/WordPopover';
 import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
+import { lookupWord } from '@/lib/jmdict';
 import type { Word } from '@/lib/types';
+
+vi.mock('@/lib/jmdict', () => ({
+  lookupWord: vi.fn(),
+}));
 
 function renderWithProvider(ui: React.ReactElement) {
   return render(
@@ -103,7 +108,7 @@ describe('WordPopover', () => {
   });
 
   it('aria-live="polite" region present while loading', () => {
-    vi.spyOn(global, 'fetch').mockReturnValue(new Promise(() => {}));
+    vi.mocked(lookupWord).mockReturnValue(new Promise(() => {}));
     const { container } = renderWithProvider(
       <WordPopover
         word={makeWord({ translation: null, user_translation: null })}
@@ -175,5 +180,77 @@ describe('WordPopover', () => {
     );
     await user.click(screen.getByRole('button', { name: 'outside' }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('JMdict hit with single POS → flat gloss list', async () => {
+    vi.mocked(lookupWord).mockResolvedValue({
+      id: 1,
+      jlpt_level: 'N5',
+      senses: [{ pos: ['n'], glosses: ['cat', 'feline'], info: undefined }],
+    });
+    renderWithProvider(
+      <WordPopover
+        word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText('cat; feline')).toBeInTheDocument());
+    expect(screen.queryByText('n')).not.toBeInTheDocument();
+  });
+
+  it('JMdict hit with multiple POS → labeled sections', async () => {
+    vi.mocked(lookupWord).mockResolvedValue({
+      id: 2,
+      jlpt_level: null,
+      senses: [
+        { pos: ['n'], glosses: ['upper', 'top'] },
+        { pos: ['v1'], glosses: ['to go up'] },
+      ],
+    });
+    renderWithProvider(
+      <WordPopover
+        word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText('n')).toBeInTheDocument());
+    expect(screen.getByText('v1')).toBeInTheDocument();
+  });
+
+  it('JMdict miss → fetch called on LLM route; translations rendered', async () => {
+    vi.mocked(lookupWord).mockResolvedValue(null);
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ translations: ['cat'] }), { status: 200 }),
+    );
+    renderWithProvider(
+      <WordPopover
+        word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText('cat')).toBeInTheDocument());
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/words/'));
+  });
+
+  it('LLM route returns 403 → no-api-key message shown', async () => {
+    vi.mocked(lookupWord).mockResolvedValue(null);
+    vi.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 403 }));
+    renderWithProvider(
+      <WordPopover
+        word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/Add an OpenRouter key/)).toBeInTheDocument(),
+    );
   });
 });

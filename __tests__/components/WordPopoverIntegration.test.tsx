@@ -5,7 +5,12 @@ import { useState } from 'react';
 import { WordToken } from '@/components/reader/WordToken';
 import { WordPopover } from '@/components/reader/WordPopover';
 import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
+import { lookupWord } from '@/lib/jmdict';
 import type { Token, Word } from '@/lib/types';
+
+vi.mock('@/lib/jmdict', () => ({
+  lookupWord: vi.fn(),
+}));
 
 const mockToken: Token = {
   surface: '猫',
@@ -73,6 +78,7 @@ function WordTokenWithPopover({ initialWord }: { initialWord: Word }) {
 describe('WordToken + WordPopover integration', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(lookupWord).mockResolvedValue(null);
   });
 
   it('click unseen word → advances status to seen and triggers translation fetch', async () => {
