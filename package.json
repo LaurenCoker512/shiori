@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@birchill/jpdict-idb": "^3.3.0",
+    "@patdx/kuromoji": "^1.0.4",
     "@types/bcryptjs": "^2.4.6",
     "@vercel/functions": "^3.5.1",
     "bcryptjs": "^3.0.3",
@@ -24,7 +25,8 @@
     "pg": "^8.20.0",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",

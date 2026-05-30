@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['@patdx/kuromoji'],
   experimental: {
     // Prevent dynamic routes (those using cookies/headers) from being served
     // stale from the client Router Cache. Without this, navigating back to the
@@ -10,6 +11,7 @@ const nextConfig = {
     outputFileTracingIncludes: {
       '/api/**': [
         './data/frequency/**',
+        './node_modules/@patdx/kuromoji/dict/**',
       ],
     },
   },

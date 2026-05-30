@@ -9,7 +9,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   }),
 }));
 
-import { analyzeGrammar, describeGrammarPattern, translateWord, tokenizeText } from '@/lib/llm';
+import { analyzeGrammar, describeGrammarPattern, translateWord, assignKanjiReadings } from '@/lib/llm';
 
 const anthropicConfig: LLMConfig = { apiKey: 'sk-or-test', model: 'anthropic/claude-sonnet-4-6' };
 
@@ -26,35 +26,24 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('tokenizeText', () => {
-  it('maps compact array-tuple response to ParsedContent', async () => {
-    const compact = [
-      [
-        ['猫', '猫', 'ねこ', 'ねこ', 1],
-        ['が', 'が', 'が', 'が', 0],
-        ['好き', '好き', 'すき', 'すき', 1],
-        ['です', 'だ', 'です', 'だ', 0],
-        ['。', '。', '。', '。', 0],
-      ],
-    ];
-    mockFetch(JSON.stringify(compact));
+describe('assignKanjiReadings', () => {
+  it('returns surface_reading and dict_reading for flagged tokens', async () => {
+    mockFetch(JSON.stringify([
+      { surface: '食べた', surface_reading: 'たべた', dict_reading: 'たべる' },
+    ]));
 
-    const result = await tokenizeText(anthropicConfig, '猫が好きです。');
-    expect(result).toHaveLength(1);
-    expect(result[0].sentence_index).toBe(0);
-    expect(result[0].raw).toBe('猫が好きです。');
-    expect(result[0].tokens[0].surface).toBe('猫');
-    expect(result[0].tokens[0].dictionary_form).toBe('猫');
-    expect(result[0].tokens[0].reading).toBe('ねこ');
-    expect(result[0].tokens[0].dict_reading).toBe('ねこ');
-    expect(result[0].tokens[0].is_content_word).toBe(true);
-    expect(result[0].tokens[1].is_content_word).toBe(false);
+    const result = await assignKanjiReadings(anthropicConfig, [
+      { surface: '食べた', dictionary_form: '食べる', sentence_context: '昨日食べた。' },
+    ]);
+
+    expect(result).toEqual([
+      { surface: '食べた', surface_reading: 'たべた', dict_reading: 'たべる' },
+    ]);
   });
 
-  it('throws when mock returns invalid JSON', async () => {
-    mockFetch('no json here at all');
-
-    await expect(tokenizeText(anthropicConfig, 'テスト')).rejects.toThrow();
+  it('returns empty array when called with no tokens', async () => {
+    const result = await assignKanjiReadings(anthropicConfig, []);
+    expect(result).toEqual([]);
   });
 });
 

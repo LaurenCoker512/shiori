@@ -1,4 +1,4 @@
-import type { ParsedContent, JlptLevel } from './types';
+import type { JlptLevel } from './types';
 import type { SessionUser } from './session';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -58,42 +58,6 @@ async function callModel(config: LLMConfig, prompt: string, maxTokens: number, s
   return stripThinkTags(text);
 }
 
-const TOKENIZE_CHUNK_SIZE = 400;
-
-function splitIntoChunks(text: string): string[] {
-  if (text.length <= TOKENIZE_CHUNK_SIZE) return [text];
-
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < text.length) {
-    if (start + TOKENIZE_CHUNK_SIZE >= text.length) {
-      chunks.push(text.slice(start).trim());
-      break;
-    }
-
-    const segment = text.slice(start, start + TOKENIZE_CHUNK_SIZE);
-
-    // Prefer paragraph boundary in the second half of the segment
-    let splitAt = segment.lastIndexOf('\n\n');
-    if (splitAt < TOKENIZE_CHUNK_SIZE / 2) {
-      // Fall back to last sentence-ending punctuation
-      const lastPunct = Math.max(
-        segment.lastIndexOf('。'),
-        segment.lastIndexOf('！'),
-        segment.lastIndexOf('？'),
-      );
-      splitAt = lastPunct > TOKENIZE_CHUNK_SIZE / 2 ? lastPunct + 1 : TOKENIZE_CHUNK_SIZE;
-    }
-
-    chunks.push(text.slice(start, start + splitAt).trim());
-    start += splitAt;
-    while (start < text.length && text[start] === '\n') start++;
-  }
-
-  return chunks.filter(c => c.length > 0);
-}
-
 // Valid first characters of a JSON value (after the opening bracket/brace)
 const JSON_ARRAY_VALUE_STARTS = new Set(['"', '[', '{', ']', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 't', 'f', 'n']);
 const JSON_OBJECT_VALUE_STARTS = new Set(['"', '}']);
@@ -144,149 +108,37 @@ function extractJson(raw: string, open: '{' | '['): string {
   throw new Error(`No JSON ${open === '[' ? 'array' : 'object'} found in model response`);
 }
 
-// Compact response: array of sentences, each sentence is an array of token tuples.
-// Token tuple: [surface, dictionary_form, surface_reading, dict_reading, is_content_word (0|1)]
-type CompactToken = [string, string, string, string, 0 | 1];
-
-// Some models nest related tokens in sub-arrays within a sentence instead of keeping the
-// sentence flat. Recursively extract all 5-element tuples whose first two elements are strings.
-function flattenToTokens(arr: unknown[]): CompactToken[] {
-  const result: CompactToken[] = [];
-  for (const item of arr) {
-    if (!Array.isArray(item)) continue;
-    if (item.length === 5 && typeof item[0] === 'string' && typeof item[1] === 'string') {
-      result.push(item as CompactToken);
-    } else {
-      result.push(...flattenToTokens(item as unknown[]));
-    }
-  }
-  return result;
+interface KanjiToken {
+  surface: string;
+  dictionary_form: string;
+  sentence_context: string;
 }
 
-function normalizeSentences(parsed: unknown): CompactToken[][] {
-  if (!Array.isArray(parsed) || parsed.length === 0) return [];
-  const first = parsed[0];
-
-  // Array of objects: [{tokens: [...]}, ...] — pick first array-valued property
-  if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
-    return (parsed as Array<Record<string, unknown>>).map(obj => {
-      const tokensKey = Object.keys(obj).find(k => Array.isArray(obj[k]));
-      return tokensKey !== undefined ? flattenToTokens(obj[tokensKey] as unknown[]) : [];
-    });
-  }
-
-  if (!Array.isArray(first)) {
-    throw new Error('Model returned unexpected sentence structure');
-  }
-
-  // Flat [token, token, ...] (single sentence) vs [[token,...], [token,...], ...] (multiple sentences)
-  // Detect by checking whether the first element of the first element is itself an array
-  if (Array.isArray(first[0])) return (parsed as unknown[][]).map(s => flattenToTokens(s));
-  return [flattenToTokens(parsed as unknown[])];
+interface KanjiReading {
+  surface: string;
+  surface_reading: string;
+  dict_reading: string;
 }
 
-async function tokenizeChunk(config: LLMConfig, chunk: string, chunkLabel: string, signal?: AbortSignal): Promise<ParsedContent> {
-  const raw = await callModel(config, `You are a Japanese NLP tokenizer. Tokenize the following Japanese text into sentences and tokens.
+export async function assignKanjiReadings(
+  config: LLMConfig,
+  tokens: KanjiToken[],
+  signal?: AbortSignal,
+): Promise<KanjiReading[]> {
+  if (tokens.length === 0) return [];
 
-Return ONLY a valid JSON array of sentences — no prose, no markdown, no code fences, no wrapper object.
-Each sentence is itself an array of token tuples: [surface, dictionary_form, surface_reading, dict_reading, is_content_word]
-- surface_reading: exact hiragana reading of the surface form. Any kana already present in the surface (okurigana) MUST appear verbatim and in the same relative position within the reading — never alter or drop them. Examples: 思った→おもった (not おまった), 向いた→むいた (not むかいた), 温まった→あたたまった (not ぬくまった), 書かれた→かかれた. When a kanji has multiple possible readings, choose the one that fits the grammatical form and context.
-- dict_reading: hiragana reading of the dictionary_form (the base/plain form)
-- is_content_word: MUST be exactly the integer 1 or 0 — no other value, no text, no comments. Use 1 for nouns/verbs/adjectives/adverbs/fixed expressions/proper nouns — including Latin-script proper nouns (person names, place names) that function as Japanese words; 0 for particles/conjunctions/auxiliary verbs/punctuation/whitespace/numerals/symbols/Latin-script abbreviations or foreign words not used as Japanese proper nouns (e.g. DNA, OK, 8, ***, 1960).
-- For Latin-script proper nouns marked is_content_word=1, surface_reading and dict_reading MUST be hiragana (e.g. "Ai" → "あい", "Tokyo" → "とうきょう"). Never use romaji or katakana as a reading.
+  const raw = await callModel(config, `You are a Japanese reading assistant. For each token below, return the hiragana reading of the surface form (surface_reading) and the hiragana reading of the dictionary form (dict_reading), using sentence context to resolve ambiguous kanji.
 
-Output shape (array of sentences, each sentence is an array of token tuples):
+Return ONLY a valid JSON array matching the input order — no prose, no markdown, no code fences.
+
 [
-  [["surface1","dict1","reading1","dictreading1",1], ["surface2","dict2","reading2","dictreading2",0]],
-  [["Ai","Ai","あい","あい",1], ["は","は","は","は",0], ["Tokyo","Tokyo","とうきょう","とうきょう",1]]
+  { "surface": "食べた", "surface_reading": "たべた", "dict_reading": "たべる" }
 ]
-The fifth element is always 1 or 0. Never write anything else there — no floats, no negative numbers, no words.
 
-Rules:
-- Split on sentence-ending punctuation (。！？) and newlines between paragraphs.
-- Every character in the input must appear in exactly one token's surface (first element).
-- dictionary_form for inflected words should be the plain form (e.g. 食べていた → 食べる).
-- CRITICAL: Each sentence array must be FLAT — every element must be a token tuple. Never nest token arrays inside other arrays within a sentence. Never group tokens into sub-arrays.
+Tokens:
+${JSON.stringify(tokens, null, 2)}`, 2048, signal);
 
-Text to tokenize:
-${chunk}`, 8192, signal);
-
-  let sentences: CompactToken[][];
-  try {
-    // The model occasionally emits a non-numeric value where the is_content_word 0|1 flag
-    // should be (e.g. "Lock", "-Classified as content word due to name"). Match any comma
-    // followed by an optional minus and a letter — which can never be valid JSON — and
-    // consume through to the next delimiter, replacing with 1.
-    const sanitized = raw.replace(/,-?[A-Za-z_][^,\]]*([\],])/g, (_m, delim) => `,1${delim}`);
-    const parsed: unknown = JSON.parse(extractJson(sanitized, '['));
-    sentences = normalizeSentences(parsed);
-  } catch (err) {
-    console.error(`[tokenize] ${chunkLabel} parse error. raw (first 500 chars): ${raw.slice(0, 500)}`);
-    throw err;
-  }
-
-  const allTokens = sentences.flat();
-  const coveredNonWhitespace = allTokens.reduce((sum, t) => sum + t[0].replace(/\s/g, '').length, 0);
-  const chunkNonWhitespace = chunk.replace(/\s/g, '').length;
-  if (coveredNonWhitespace < chunkNonWhitespace * 0.9) {
-    throw new Error(
-      `[${chunkLabel}] Tokenizer only covered ${coveredNonWhitespace} of ${chunkNonWhitespace} non-whitespace input characters — model likely self-truncated`,
-    );
-  }
-
-  const contentWordCount = allTokens.filter(t => t[4] === 1).length;
-  if (chunkNonWhitespace > 20 && contentWordCount === 0) {
-    throw new Error(
-      `[${chunkLabel}] Tokenizer returned 0 content words for ${chunkNonWhitespace} non-whitespace input chars — model likely set all is_content_word to 0`,
-    );
-  }
-
-  console.log(`[tokenize] ${chunkLabel} ok: ${chunk.length} chars in, ${raw.length} chars response, ${coveredNonWhitespace}/${chunkNonWhitespace} non-ws covered`);
-
-  return sentences.map((tokens, index) => ({
-    sentence_index: index,
-    raw: tokens.map(t => t[0]).join(''),
-    tokens: tokens.map(t => ({
-      surface: t[0],
-      dictionary_form: t[1],
-      reading: t[2],
-      dict_reading: t[3],
-      is_content_word: t[4] === 1,
-    })),
-  }));
-}
-
-export async function tokenizeText(config: LLMConfig, cleanedText: string, signal?: AbortSignal): Promise<ParsedContent> {
-  const chunks = splitIntoChunks(cleanedText);
-
-  const chunkResults = await Promise.all(
-    chunks.map(async (chunk, i) => {
-      const chunkLabel = `chunk ${i + 1}/${chunks.length}`;
-      let lastError: unknown;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const result = await tokenizeChunk(config, chunk, chunkLabel, signal);
-          if (result.length === 0) {
-            throw new Error(`[${chunkLabel}] Tokenizer returned no sentences (${chunk.length} chars). The model may have failed to parse this section.`);
-          }
-          return result;
-        } catch (err) {
-          if (err instanceof Error && err.name === 'AbortError') throw err;
-          lastError = err;
-          if (attempt < 2) console.warn(`[tokenize] ${chunkLabel} attempt ${attempt} failed, retrying: ${err instanceof Error ? err.message : err}`);
-        }
-      }
-      throw lastError;
-    })
-  );
-
-  let sentenceOffset = 0;
-  const results: ParsedContent = [];
-  for (const chunkResult of chunkResults) {
-    results.push(...chunkResult.map(s => ({ ...s, sentence_index: s.sentence_index + sentenceOffset })));
-    sentenceOffset += chunkResult.length;
-  }
-  return results;
+  return JSON.parse(extractJson(raw, '[')) as KanjiReading[];
 }
 
 interface GrammarHint {
