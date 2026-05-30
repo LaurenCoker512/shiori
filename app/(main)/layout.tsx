@@ -6,6 +6,7 @@ import { ImportToastProvider } from '@/components/ui/ImportToastProvider';
 import { UserNameProvider } from '@/components/ui/UserNameContext';
 import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
 import { WelcomeModal } from '@/components/ui/WelcomeModal';
+import { JpdictSync } from '@/components/JpdictSync';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const user = await getSession();
@@ -21,6 +22,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     <UserNameProvider initialName={user.name}>
       <KnownWordCountProvider initialCount={initialKnownCount}>
         <ImportToastProvider>
+          <JpdictSync />
           <SiteNav />
           <WelcomeModal hasApiKey={user.openrouter_api_key !== null} />
           <div className="relative z-10 pt-16">

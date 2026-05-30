@@ -20,11 +20,26 @@ function buildEntry(
   return { id: entry.id, senses, jlpt_level: jlptLevel(dictionaryForm), canonicalForm };
 }
 
+async function isJpdictReady(): Promise<boolean> {
+  // indexedDB.databases() is not available in Firefox; fall through and let
+  // getWords return [] (it gracefully handles a missing/wrong-version DB).
+  if (typeof indexedDB === 'undefined' || typeof indexedDB.databases !== 'function') return true;
+  const dbs = await indexedDB.databases();
+  return dbs.some(d => d.name === 'jpdict' && d.version === 4);
+}
+
 export async function lookupWord(
   dictionaryForm: string,
   reading: string,
 ): Promise<JMdictEntry | null> {
   if (typeof window === 'undefined') return null;
+
+  // Don't call getWords when the jpdict database doesn't exist yet.
+  // @birchill/jpdict-idb aborts its upgrade transaction in that case, which
+  // causes idb to create a transaction.done promise (stored in a WeakMap,
+  // never awaited) that rejects with AbortError — an unhandled rejection that
+  // crashes the Next.js dev overlay.
+  if (!await isJpdictReady()) return null;
 
   const { getWords } = await import('@birchill/jpdict-idb');
   const results = await getWords(dictionaryForm);

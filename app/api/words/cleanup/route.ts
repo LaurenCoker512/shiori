@@ -70,9 +70,10 @@ export async function POST(request: Request): Promise<Response> {
       const [winner, loser] = pickWinner(thisWord, existing);
 
       if (winner.id === id) {
-        // Winner is the word being normalized — update its form, then remove the conflicting row
-        await query(`UPDATE words SET dictionary_form = $1 WHERE id = $2`, [canonical_dictionary_form, id]);
+        // Winner is the word being normalized — delete the conflicting row first to free
+        // the unique constraint slot, then rename this row to the canonical form.
         await mergeWords(winner, existing, user.id);
+        await query(`UPDATE words SET dictionary_form = $1 WHERE id = $2`, [canonical_dictionary_form, id]);
       } else {
         // Winner is the existing canonical row — just remove the word being normalized
         await mergeWords(winner, thisWord, user.id);
