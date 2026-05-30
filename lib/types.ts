@@ -66,6 +66,7 @@ export interface JMdictEntry {
   id: number;
   senses: JMdictSense[];
   jlpt_level: JlptLevel | null;
+  derivationChain?: string[];
 }
 
 export function parseTranslations(translation: string | null): string[] {

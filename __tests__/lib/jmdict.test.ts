@@ -10,7 +10,12 @@ vi.mock('@/data/jlpt.json', () => ({
   default: { 猫: 'N5', '食べる': 'N5' },
 }));
 
+vi.mock('@/lib/deinflect', () => ({
+  deinflect: vi.fn().mockReturnValue([]),
+}));
+
 import { lookupWord } from '@/lib/jmdict';
+import { deinflect } from '@/lib/deinflect';
 
 const fixtureEntry = {
   id: 1,
@@ -87,5 +92,18 @@ describe('lookupWord', () => {
     const result = await lookupWord('謎語', 'なぞご');
 
     expect(result?.jlpt_level).toBeNull();
+  });
+
+  it('Stage 2: deinflection hit → returns entry with derivationChain', async () => {
+    vi.mocked(mockGetWords)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([fixtureEntry]);
+
+    vi.mocked(deinflect).mockReturnValue([
+      { baseForm: '食べる', derivationChain: ['past'] },
+    ]);
+
+    const result = await lookupWord('食べた', 'たべた');
+    expect(result?.derivationChain).toEqual(['past']);
   });
 });

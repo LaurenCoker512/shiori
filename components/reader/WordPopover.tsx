@@ -46,6 +46,11 @@ function JMdictDisplay({ entry }: { entry: JMdictEntry }) {
           )}
         </div>
       ))}
+      {entry.derivationChain !== undefined && entry.derivationChain.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          ← {entry.derivationChain.join(' ← ')}
+        </p>
+      )}
     </div>
   );
 }

@@ -239,6 +239,26 @@ describe('WordPopover', () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/words/'));
   });
 
+  it('deinflected result → derivation chain note rendered', async () => {
+    vi.mocked(lookupWord).mockResolvedValue({
+      id: 3,
+      jlpt_level: null,
+      senses: [{ pos: ['v1'], glosses: ['to eat'] }],
+      derivationChain: ['passive', 'polite', 'past'],
+    });
+    renderWithProvider(
+      <WordPopover
+        word={makeWord({ translation: null, user_translation: null })}
+        anchorRect={mockAnchorRect}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByText('← passive ← polite ← past')).toBeInTheDocument(),
+    );
+  });
+
   it('LLM route returns 403 → no-api-key message shown', async () => {
     vi.mocked(lookupWord).mockResolvedValue(null);
     vi.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 403 }));

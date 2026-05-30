@@ -1,5 +1,6 @@
 import jlptData from '@/data/jlpt.json';
 import type { JMdictEntry, JMdictSense, JlptLevel } from '@/lib/types';
+import { deinflect } from '@/lib/deinflect';
 
 function jlptLevel(dictionaryForm: string): JlptLevel | null {
   const level = (jlptData as Record<string, string>)[dictionaryForm];
@@ -36,7 +37,16 @@ export async function lookupWord(
     results[0] ??
     null;
 
-  if (!match) return null;
+  if (!match) {
+    const candidates = deinflect(dictionaryForm);
+    for (const { baseForm, derivationChain } of candidates) {
+      const deinflected = await getWords(baseForm);
+      if (deinflected.length > 0) {
+        return { ...buildEntry(deinflected[0]!, baseForm), derivationChain };
+      }
+    }
+    return null;
+  }
 
   return buildEntry(match, dictionaryForm);
 }
