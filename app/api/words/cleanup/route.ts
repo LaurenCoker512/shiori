@@ -44,6 +44,30 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as CleanupPayload;
   const { normalizations, frequency_backfill_ids } = body;
 
+  // 0. Prune words not referenced in any text's current parsed_content
+  const pruneResult = await query<{ id: number }>(
+    `WITH content_words AS (
+       SELECT DISTINCT
+         t->>'dictionary_form' AS dictionary_form,
+         t->>'dict_reading'    AS reading
+       FROM texts,
+            jsonb_array_elements(parsed_content) AS s,
+            jsonb_array_elements(s->'tokens') AS t
+       WHERE texts.user_id = $1
+         AND (t->>'is_content_word')::boolean = true
+     )
+     DELETE FROM words w
+     WHERE w.user_id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM content_words cw
+         WHERE cw.dictionary_form = w.dictionary_form
+           AND cw.reading = w.reading
+       )
+     RETURNING id`,
+    [user.id],
+  );
+  const pruned = pruneResult.rows.length;
+
   let normalized = 0;
   let merged = 0;
 
@@ -146,5 +170,5 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  return jsonResponse({ normalized, merged, frequencyBackfilled });
+  return jsonResponse({ pruned, normalized, merged, frequencyBackfilled });
 }

@@ -5,6 +5,7 @@ import { lookupWord } from '@/lib/jmdict';
 import { useReparse } from '@/components/ui/ReparseToastProvider';
 
 interface CleanupSummary {
+  pruned: number;
   normalized: number;
   merged: number;
   frequencyBackfilled: number;
@@ -95,7 +96,7 @@ export function VocabularyActions() {
 
         {cleanupStatus === 'done' && summary !== null && (
           <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
-            {summary.normalized} words normalized · {summary.merged} duplicates merged ·{' '}
+            {summary.pruned} orphaned words removed · {summary.normalized} words normalized · {summary.merged} duplicates merged ·{' '}
             {summary.frequencyBackfilled} words updated with frequency data
           </p>
         )}
