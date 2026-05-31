@@ -67,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
       // Collision: merge the two rows without touching the unique constraint
       const existing = conflictResult.rows[0]!;
       const thisWord: WordRow = { id, status: wordRow.status, user_translation: wordRow.user_translation };
-      const [winner, loser] = pickWinner(thisWord, existing);
+      const [winner] = pickWinner(thisWord, existing);
 
       if (winner.id === id) {
         // Winner is the word being normalized — delete the conflicting row first to free
