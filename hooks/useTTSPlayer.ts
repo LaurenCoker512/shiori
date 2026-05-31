@@ -66,6 +66,9 @@ export function useTTSPlayer({
   const cache = useRef(createIndexedDBCache());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  // Incremented each time a new playSentence call begins; async continuations
+  // check their captured generation to bail if a newer call has superseded them.
+  const playbackGenRef = useRef(0);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -128,6 +131,9 @@ export function useTTSPlayer({
       return;
     }
 
+    // Claim this generation; any earlier async continuation that checks will bail.
+    const generation = ++playbackGenRef.current;
+
     stopCurrent();
     setActiveSentence(sentenceIndex);
     setLoadingAudio(true);
@@ -137,12 +143,15 @@ export function useTTSPlayer({
       audioData = await getAudio(sentenceIndex);
     } catch (err) {
       console.error('TTS audio fetch error:', err);
-      setPlayingState(false);
-      setActiveSentence(null);
-      setLoadingAudio(false);
+      if (playbackGenRef.current === generation) {
+        setPlayingState(false);
+        setActiveSentence(null);
+        setLoadingAudio(false);
+      }
       return;
     }
 
+    if (playbackGenRef.current !== generation) return;
     setLoadingAudio(false);
 
     const ctx = getAudioContext();
@@ -151,11 +160,11 @@ export function useTTSPlayer({
       decoded = await ctx.decodeAudioData(audioData.slice(0));
     } catch (err) {
       console.error('TTS decode error:', err);
-      setPlayingState(false);
+      if (playbackGenRef.current === generation) setPlayingState(false);
       return;
     }
 
-    if (!isPlayingRef.current) return;
+    if (!isPlayingRef.current || playbackGenRef.current !== generation) return;
 
     const source = ctx.createBufferSource();
     source.buffer = decoded;
@@ -170,8 +179,10 @@ export function useTTSPlayer({
     }
 
     source.onended = () => {
-      if (!isPlayingRef.current) return;
-      const next = (activeSentenceIndexRef.current ?? sentenceIndex) + 1;
+      // Guard against double-fire (Safari fires onended after stop()) and
+      // stale handlers from superseded playSentence calls.
+      if (!isPlayingRef.current || playbackGenRef.current !== generation) return;
+      const next = sentenceIndex + 1;
       if (next < sentences.length) {
         playSentence(next).catch(console.error);
       } else {
