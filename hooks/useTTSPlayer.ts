@@ -116,6 +116,18 @@ export function useTTSPlayer({
   const playSentence = useCallback(async (sentenceIndex: number) => {
     if (!ttsEnabled || sentenceIndex < 0 || sentenceIndex >= sentences.length) return;
 
+    // Skip whitespace-only sentences (can exist in older parsed_content from pre-fix imports).
+    if (sentences[sentenceIndex].raw.trim().length === 0) {
+      const next = sentenceIndex + 1;
+      if (next < sentences.length) {
+        playSentence(next).catch(console.error);
+      } else {
+        setPlayingState(false);
+        setActiveSentence(null);
+      }
+      return;
+    }
+
     stopCurrent();
     setActiveSentence(sentenceIndex);
     setLoadingAudio(true);
@@ -150,8 +162,9 @@ export function useTTSPlayer({
     source.connect(ctx.destination);
     currentSourceRef.current = source;
 
-    // Pre-fetch next sentence while current plays.
-    const nextIndex = sentenceIndex + 1;
+    // Pre-fetch next non-whitespace sentence while current plays.
+    let nextIndex = sentenceIndex + 1;
+    while (nextIndex < sentences.length && sentences[nextIndex].raw.trim().length === 0) nextIndex++;
     if (nextIndex < sentences.length) {
       getAudio(nextIndex).catch(() => {/* pre-fetch best-effort */});
     }

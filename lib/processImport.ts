@@ -85,7 +85,10 @@ export async function buildParsedContent(
       return buildToken(t, needsLlmReading ? llmMap.get(t) : undefined);
     });
     const raw = tokens.map(t => t.surface).join('');
-    sentences.push({ sentence_index: sentenceIndex++, raw, tokens });
+    // Skip whitespace-only sentences (e.g. standalone newlines from Kuromoji tokenization).
+    if (raw.trim().length > 0) {
+      sentences.push({ sentence_index: sentenceIndex++, raw, tokens });
+    }
     currentKuroTokens = [];
   }
 
