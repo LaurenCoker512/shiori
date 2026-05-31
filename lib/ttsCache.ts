@@ -72,4 +72,33 @@ export function createIndexedDBCache(): TTSAudioCache {
   };
 }
 
-// Future: export function createServerBlobCache(baseUrl: string): TTSAudioCache { ... }
+// Standalone helpers for cache invalidation after text re-parse.
+
+export async function clearTTSCacheForText(textId: number): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = db
+      .transaction(STORE_NAME, 'readwrite')
+      .objectStore(STORE_NAME);
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor === null) { resolve(); return; }
+      if ((cursor.key as string).startsWith(`${textId}:`)) cursor.delete();
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function clearAllTTSCache(): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db
+      .transaction(STORE_NAME, 'readwrite')
+      .objectStore(STORE_NAME)
+      .clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}

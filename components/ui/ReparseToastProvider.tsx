@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { ReparseToast } from './ReparseToast';
 import type { ReparseJob } from './ReparseToast';
+import { clearTTSCacheForText, clearAllTTSCache } from '@/lib/ttsCache';
 
 interface ReparseContextValue {
   reparsePhase: 'idle' | 'running' | 'done' | 'error';
@@ -39,6 +40,7 @@ export function ReparseToastProvider({ children }: { children: React.ReactNode }
         setJob({ phase: 'running', current: i + 1, total: texts.length });
       }
 
+      await clearAllTTSCache().catch(() => {/* best-effort */});
       setJob(prev => prev !== null ? { ...prev, phase: 'done' } : null);
     } catch {
       setJob(prev => prev !== null ? { ...prev, phase: 'error' } : null);
@@ -55,6 +57,7 @@ export function ReparseToastProvider({ children }: { children: React.ReactNode }
     try {
       const res = await fetch(`/api/texts/${textId}/reparse`, { method: 'POST' });
       if (!res.ok) throw new Error('Reparse failed');
+      await clearTTSCacheForText(textId).catch(() => {/* best-effort */});
       setJob(prev => prev !== null ? { ...prev, phase: 'done' } : null);
     } catch {
       setJob(prev => prev !== null ? { ...prev, phase: 'error' } : null);
