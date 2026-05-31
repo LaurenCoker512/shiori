@@ -40,9 +40,6 @@ next-env.d.ts
 # database backups
 /backups
 
-# frequency data (large binary assets, not committed)
-/data/frequency
-
 # Docs
 FUTURE_FEATURES.md
 DEPLOYMENT.md
