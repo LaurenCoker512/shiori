@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { lookupWord } from '@/lib/jmdict';
+import { useReparse } from '@/components/ui/ReparseToastProvider';
 
 interface CleanupSummary {
   normalized: number;
@@ -9,17 +10,11 @@ interface CleanupSummary {
   frequencyBackfilled: number;
 }
 
-interface ReparseProgress {
-  current: number;
-  total: number;
-}
-
 export function VocabularyActions() {
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [summary, setSummary] = useState<CleanupSummary | null>(null);
 
-  const [reparseStatus, setReparseStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
-  const [reparseProgress, setReparseProgress] = useState<ReparseProgress>({ current: 0, total: 0 });
+  const { reparsePhase, startReparse } = useReparse();
 
   async function handleCleanup() {
     setCleanupStatus('running');
@@ -60,26 +55,6 @@ export function VocabularyActions() {
     }
     setSummary(await cleanupRes.json() as CleanupSummary);
     setCleanupStatus('done');
-  }
-
-  async function handleReparse() {
-    setReparseStatus('running');
-    setReparseProgress({ current: 0, total: 0 });
-
-    const textsRes = await fetch('/api/texts');
-    if (!textsRes.ok) {
-      setReparseStatus('error');
-      return;
-    }
-    const { texts } = await textsRes.json() as { texts: Array<{ id: number }> };
-    setReparseProgress({ current: 0, total: texts.length });
-
-    for (let i = 0; i < texts.length; i++) {
-      await fetch(`/api/texts/${texts[i].id}/reparse`, { method: 'POST' });
-      setReparseProgress({ current: i + 1, total: texts.length });
-    }
-
-    setReparseStatus('done');
   }
 
   return (
@@ -140,35 +115,14 @@ export function VocabularyActions() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => { void handleReparse(); }}
-            disabled={reparseStatus === 'running'}
+            onClick={() => { void startReparse(); }}
+            disabled={reparsePhase === 'running'}
             className="font-en text-[13px] font-semibold px-5 py-2.5 rounded-full disabled:opacity-40 transition-opacity"
             style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)', border: 'none', cursor: 'pointer' }}
           >
-            {reparseStatus === 'running'
-              ? reparseProgress.total > 0
-                ? `Re-parsing text ${reparseProgress.current} of ${reparseProgress.total}…`
-                : 'Loading…'
-              : 'Re-parse texts'}
+            {reparsePhase === 'running' ? 'Re-parsing…' : 'Re-parse texts'}
           </button>
-
-          {reparseStatus === 'done' && (
-            <span className="font-en text-[13px]" style={{ color: 'var(--yg-bamboo-dark)' }}>
-              Done.
-            </span>
-          )}
-          {reparseStatus === 'error' && (
-            <span role="alert" className="font-en text-[13px]" style={{ color: 'var(--yg-coral-dark)' }}>
-              Re-parse failed. Please try again.
-            </span>
-          )}
         </div>
-
-        {reparseStatus === 'done' && (
-          <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
-            Re-parse complete. Run vocabulary cleanup to normalize any newly inserted words.
-          </p>
-        )}
       </div>
     </div>
   );

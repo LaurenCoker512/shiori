@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { query } from '@/lib/db';
 import { SiteNav } from '@/components/ui/SiteNav';
 import { ImportToastProvider } from '@/components/ui/ImportToastProvider';
+import { ReparseToastProvider } from '@/components/ui/ReparseToastProvider';
 import { UserNameProvider } from '@/components/ui/UserNameContext';
 import { KnownWordCountProvider } from '@/components/ui/KnownWordCountContext';
 import { WelcomeModal } from '@/components/ui/WelcomeModal';
@@ -22,12 +23,14 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     <UserNameProvider initialName={user.name}>
       <KnownWordCountProvider initialCount={initialKnownCount}>
         <ImportToastProvider>
-          <JpdictSync />
-          <SiteNav />
-          <WelcomeModal hasApiKey={user.openrouter_api_key !== null} />
-          <div className="relative z-10 pt-16">
-            {children}
-          </div>
+          <ReparseToastProvider>
+            <JpdictSync />
+            <SiteNav />
+            <WelcomeModal hasApiKey={user.openrouter_api_key !== null} />
+            <div className="relative z-10 pt-16">
+              {children}
+            </div>
+          </ReparseToastProvider>
         </ImportToastProvider>
       </KnownWordCountProvider>
     </UserNameProvider>

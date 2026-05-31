@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TagPicker } from '@/components/ui/TagPicker';
+import { useReparse } from '@/components/ui/ReparseToastProvider';
 import type { Tag } from '@/lib/types';
 import { TAG_COLOR_SWATCHES } from '@/lib/tags';
 
@@ -17,11 +18,11 @@ interface ReaderHeaderProps {
 
 export function ReaderHeader({ title: initialTitle, textId, initialTags }: ReaderHeaderProps) {
   const router = useRouter();
+  const { reparseSingle } = useReparse();
   const [title, setTitle] = useState(initialTitle);
   const [tags, setTags] = useState<Tag[]>(initialTags);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isReparsing, setIsReparsing] = useState(false);
   const [isTagging, setIsTagging] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [renameError, setRenameError] = useState('');
@@ -50,9 +51,7 @@ export function ReaderHeader({ title: initialTitle, textId, initialTags }: Reade
   }
 
   async function handleReparse() {
-    setIsReparsing(true);
-    await fetch(`/api/texts/${textId}/reparse`, { method: 'POST' });
-    setIsReparsing(false);
+    await reparseSingle(textId, title);
     router.refresh();
   }
 
@@ -72,18 +71,12 @@ export function ReaderHeader({ title: initialTitle, textId, initialTags }: Reade
         >
           ← Library
         </Link>
-        {isReparsing ? (
-          <span className="font-en text-[12px]" style={{ color: 'var(--yg-ink-muted)' }}>
-            Reparsing…
-          </span>
-        ) : (
-          <OverflowMenu
-            onTags={() => setIsTagging(true)}
-            onRename={startRename}
-            onDelete={() => setIsDeleting(true)}
-            onReparse={() => { void handleReparse(); }}
-          />
-        )}
+        <OverflowMenu
+          onTags={() => setIsTagging(true)}
+          onRename={startRename}
+          onDelete={() => setIsDeleting(true)}
+          onReparse={() => { void handleReparse(); }}
+        />
       </div>
 
       {/* Title card */}

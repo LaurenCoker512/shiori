@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TagPicker } from '@/components/ui/TagPicker';
+import { useReparse } from '@/components/ui/ReparseToastProvider';
 import type { Tag } from '@/lib/types';
 import { TAG_COLOR_SWATCHES } from '@/lib/tags';
 
@@ -92,7 +93,6 @@ type CardAction =
   | { type: 'idle' }
   | { type: 'renaming'; id: number; inputValue: string; error: string }
   | { type: 'deleting'; id: number; title: string }
-  | { type: 'reparsing'; id: number }
   | { type: 'tagging'; id: number; currentTags: Tag[] };
 
 type SortKey = 'recent' | 'title-asc' | 'title-desc' | 'pct-asc' | 'pct-desc';
@@ -133,6 +133,7 @@ const MOOD_GRADIENTS: Record<string, string> = {
 
 export function ComprehensionList({ comprehension, processingTexts = [] }: ComprehensionListProps) {
   const router = useRouter();
+  const { reparseSingle } = useReparse();
   const [cardAction, setCardAction] = useState<CardAction>({ type: 'idle' });
   // Local tag overrides: updated optimistically after TagPicker saves
   const [localTags, setLocalTags] = useState<Map<number, Tag[]>>(new Map());
@@ -195,10 +196,8 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
     router.refresh();
   }
 
-  async function handleReparse(id: number) {
-    setCardAction({ type: 'reparsing', id });
-    await fetch(`/api/texts/${id}/reparse`, { method: 'POST' });
-    setCardAction({ type: 'idle' });
+  async function handleReparse(id: number, title: string) {
+    await reparseSingle(id, title);
     router.refresh();
   }
 
@@ -311,7 +310,6 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
             ? new Date(entry.last_read_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
             : 'Not started';
           const isRenaming = cardAction.type === 'renaming' && cardAction.id === entry.text_id;
-          const isReparsing = cardAction.type === 'reparsing' && cardAction.id === entry.text_id;
           const entryTags = tagsFor(entry);
 
           return (
@@ -387,7 +385,7 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
                         {entry.title}
                       </div>
                       <div className="font-en text-[11px] opacity-70 mt-0.5">
-                        {isReparsing ? 'Reparsing…' : lastRead}
+                        {lastRead}
                       </div>
                       <div className="h-5 mt-1.5 min-w-0">
                         <TagPills tags={entryTags} />
@@ -414,17 +412,13 @@ export function ComprehensionList({ comprehension, processingTexts = [] }: Compr
               {/* Overflow menu — sits outside the Link to avoid triggering navigation */}
               {!isRenaming && (
                 <div className="absolute top-2 right-1" onClick={e => e.stopPropagation()}>
-                  {isReparsing ? (
-                    <span className="font-en text-[11px] px-2" style={{ color: 'rgba(250,243,223,0.7)' }}>…</span>
-                  ) : (
-                    <OverflowMenu
-                      variant="light"
-                      onTags={() => setCardAction({ type: 'tagging', id: entry.text_id, currentTags: tagsFor(entry) })}
-                      onRename={() => setCardAction({ type: 'renaming', id: entry.text_id, inputValue: entry.title, error: '' })}
-                      onDelete={() => setCardAction({ type: 'deleting', id: entry.text_id, title: entry.title })}
-                      onReparse={() => { void handleReparse(entry.text_id); }}
-                    />
-                  )}
+                  <OverflowMenu
+                    variant="light"
+                    onTags={() => setCardAction({ type: 'tagging', id: entry.text_id, currentTags: tagsFor(entry) })}
+                    onRename={() => setCardAction({ type: 'renaming', id: entry.text_id, inputValue: entry.title, error: '' })}
+                    onDelete={() => setCardAction({ type: 'deleting', id: entry.text_id, title: entry.title })}
+                    onReparse={() => { void handleReparse(entry.text_id, entry.title); }}
+                  />
                 </div>
               )}
             </div>
