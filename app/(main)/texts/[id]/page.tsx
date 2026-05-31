@@ -46,6 +46,38 @@ export default async function ReaderPage({ params }: { params: { id: string } })
     wordStatusMap[`${word.dictionary_form}|${toHiragana(word.reading)}`] = word;
   }
 
+  // Repair: if word insertion was cut short during import (e.g. serverless
+  // function timeout), some content words will be absent from the DB. Detect
+  // them now and insert them so the reader is never left with unclickable words.
+  const UNIVERSAL_TOKEN = /^[\d\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~a-zA-Z]+$/;
+  const repairSeen = new Set<string>();
+  const repairForms: string[] = [];
+  const repairReadings: string[] = [];
+  for (const sentence of text.parsed_content) {
+    for (const token of sentence.tokens) {
+      if (!token.is_content_word || UNIVERSAL_TOKEN.test(token.dictionary_form)) continue;
+      const reading = toHiragana(token.dict_reading);
+      const key = `${token.dictionary_form}|${reading}`;
+      if (wordStatusMap[key] === undefined && !repairSeen.has(key)) {
+        repairSeen.add(key);
+        repairForms.push(token.dictionary_form);
+        repairReadings.push(reading);
+      }
+    }
+  }
+  if (repairForms.length > 0) {
+    const repaired = await query<Word>(
+      `INSERT INTO words (user_id, dictionary_form, reading)
+       SELECT $1, unnest($2::text[]), unnest($3::text[])
+       ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING
+       RETURNING *`,
+      [uid, repairForms, repairReadings],
+    );
+    for (const word of repaired.rows) {
+      wordStatusMap[`${word.dictionary_form}|${toHiragana(word.reading)}`] = word;
+    }
+  }
+
   const furiganaResult = await query<FuriganaOverride>(
     'SELECT word_id, surface_form, corrected_reading FROM furigana_overrides WHERE user_id = $1',
     [uid],

@@ -5,7 +5,6 @@ import type { IpadicFeatures } from '@patdx/kuromoji';
 import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
 import { query } from '@/lib/db';
 import { registerImportAbort, unregisterImportAbort } from '@/lib/importAbortControllers';
-import { lookupFrequencyTier } from '@/lib/frequency';
 import type { Token, Sentence } from '@/lib/types';
 
 const KANJI_RE = /[一-鿿㐀-䶿]/;
@@ -37,8 +36,8 @@ function buildToken(
   return {
     surface: kuromoji.surface_form,
     dictionary_form: dictionaryForm,
-    reading: llmReading?.surface_reading ?? kuroReading,
-    dict_reading: llmReading?.dict_reading ?? (pureKanaBasic ? toHiragana(kuromoji.basic_form!) : kuroReading),
+    reading: toHiragana(llmReading?.surface_reading ?? kuroReading),
+    dict_reading: toHiragana(llmReading?.dict_reading ?? (pureKanaBasic ? toHiragana(kuromoji.basic_form!) : kuroReading)),
     is_content_word: CONTENT_POS.has(kuromoji.pos),
   };
 }
@@ -134,11 +133,6 @@ export async function processImport(
     }
     const parsedContent = parseHeadingSentinels(sentences);
 
-    await query(
-      'UPDATE texts SET parsed_content = $1, import_status = $2 WHERE id = $3',
-      [JSON.stringify(parsedContent), 'ready', textId],
-    );
-
     const UNIVERSAL_TOKEN = /^[\d\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~a-zA-Z]+$/;
     const contentWords = parsedContent
       .flatMap(s => s.tokens)
@@ -146,16 +140,20 @@ export async function processImport(
     if (contentWords.length > 0) {
       const forms = contentWords.map(t => t.dictionary_form);
       const readings = contentWords.map(t => toHiragana(t.dict_reading));
-      const frequencyTiers = await Promise.all(
-        contentWords.map(t => lookupFrequencyTier(t.dictionary_form, toHiragana(t.dict_reading))),
-      );
       await query(
-        `INSERT INTO words (user_id, dictionary_form, reading, frequency_tier)
-         SELECT $1, unnest($2::text[]), unnest($3::text[]), unnest($4::text[])
+        `INSERT INTO words (user_id, dictionary_form, reading)
+         SELECT $1, unnest($2::text[]), unnest($3::text[])
          ON CONFLICT (user_id, dictionary_form, reading) DO NOTHING`,
-        [userId, forms, readings, frequencyTiers],
+        [userId, forms, readings],
       );
     }
+
+    // Mark as ready only after words are inserted so the reader never opens
+    // with a wordStatusMap that is missing words from this text.
+    await query(
+      'UPDATE texts SET parsed_content = $1, import_status = $2 WHERE id = $3',
+      [JSON.stringify(parsedContent), 'ready', textId],
+    );
   } catch (err) {
     unregisterImportAbort(textId);
     // Aborted cancellations are intentional — don't write an error to the (now-deleted) row

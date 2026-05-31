@@ -18,32 +18,40 @@ interface FrequencyData {
 }
 
 let cache: FrequencyData | null = null;
+let cachePromise: Promise<FrequencyData> | null = null;
 
-export function _resetCacheForTesting() { cache = null; }
+export function _resetCacheForTesting() { cache = null; cachePromise = null; }
 
 async function getFrequencyData(): Promise<FrequencyData> {
   if (cache !== null) return cache;
-  const base = path.join(process.cwd(), 'data/frequency');
-  const [raw1, raw2] = await Promise.all([
-    fs.readFile(path.join(base, 'jpdb.json'), 'utf8'),
-    fs.readFile(path.join(base, 'jpdb-by-entry.json'), 'utf8'),
-  ]);
-  const surface = JSON.parse(raw1) as SurfaceIndex;
-  const entryIndex = JSON.parse(raw2) as EntryIndex;
+  // Singleton promise prevents concurrent callers from each opening the files
+  // simultaneously (which would cause EMFILE on large Promise.all batches).
+  if (cachePromise === null) {
+    cachePromise = (async () => {
+      const base = path.join(process.cwd(), 'data/frequency');
+      const [raw1, raw2] = await Promise.all([
+        fs.readFile(path.join(base, 'jpdb.json'), 'utf8'),
+        fs.readFile(path.join(base, 'jpdb-by-entry.json'), 'utf8'),
+      ]);
+      const surface = JSON.parse(raw1) as SurfaceIndex;
+      const entryIndex = JSON.parse(raw2) as EntryIndex;
 
-  // Build headword|reading → best rank map from the by-entry index.
-  // Collisions (same headword+reading in multiple entries) keep the lowest rank.
-  const byHeadwordReading = new Map<string, number>();
-  for (const rec of Object.values(entryIndex)) {
-    const key = `${rec.headword}|${rec.reading ?? ''}`;
-    const existing = byHeadwordReading.get(key);
-    if (existing === undefined || rec.rank < existing) {
-      byHeadwordReading.set(key, rec.rank);
-    }
+      // Build headword|reading → best rank map from the by-entry index.
+      // Collisions (same headword+reading in multiple entries) keep the lowest rank.
+      const byHeadwordReading = new Map<string, number>();
+      for (const rec of Object.values(entryIndex)) {
+        const key = `${rec.headword}|${rec.reading ?? ''}`;
+        const existing = byHeadwordReading.get(key);
+        if (existing === undefined || rec.rank < existing) {
+          byHeadwordReading.set(key, rec.rank);
+        }
+      }
+
+      cache = { surface, byHeadwordReading };
+      return cache;
+    })();
   }
-
-  cache = { surface, byHeadwordReading };
-  return cache;
+  return cachePromise;
 }
 
 export function rankToTier(rank: number): FrequencyTier {

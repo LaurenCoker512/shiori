@@ -1,5 +1,6 @@
 import type { ParsedContent, JlptLevel } from './types';
 import type { SessionUser } from './session';
+import { toHiragana } from './text-processing';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -239,8 +240,8 @@ ${chunk}`, 8192, signal);
     tokens: tokens.map(t => ({
       surface: t[0],
       dictionary_form: t[1],
-      reading: t[2],
-      dict_reading: t[3],
+      reading: toHiragana(t[2]),
+      dict_reading: toHiragana(t[3]),
       is_content_word: t[4] === 1,
     })),
   }));

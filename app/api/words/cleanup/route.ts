@@ -2,6 +2,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { jsonResponse } from '@/lib/api';
 import { lookupFrequencyTier } from '@/lib/frequency';
+import { toHiragana } from '@/lib/text-processing';
 
 interface NormalizationItem {
   id: number;
@@ -44,28 +45,51 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as CleanupPayload;
   const { normalizations, frequency_backfill_ids } = body;
 
-  // 0. Prune words not referenced in any text's current parsed_content
-  const pruneResult = await query<{ id: number }>(
-    `WITH content_words AS (
-       SELECT DISTINCT
-         t->>'dictionary_form' AS dictionary_form,
-         t->>'dict_reading'    AS reading
-       FROM texts,
-            jsonb_array_elements(parsed_content) AS s,
-            jsonb_array_elements(s->'tokens') AS t
-       WHERE texts.user_id = $1
-         AND (t->>'is_content_word')::boolean = true
-     )
-     DELETE FROM words w
-     WHERE w.user_id = $1
-       AND NOT EXISTS (
-         SELECT 1 FROM content_words cw
-         WHERE cw.dictionary_form = w.dictionary_form
-           AND cw.reading = w.reading
-       )
-     RETURNING id`,
+  // 0. Prune words not referenced in any text's current parsed_content.
+  // dict_reading in JSON may be katakana (LLM sometimes ignores the hiragana
+  // instruction) while word.reading is always stored as hiragana. Normalize
+  // in JS before comparing so we never incorrectly delete real words.
+  const rawContentWords = await query<{ dictionary_form: string; raw_reading: string }>(
+    `SELECT DISTINCT
+       t->>'dictionary_form' AS dictionary_form,
+       t->>'dict_reading'    AS raw_reading
+     FROM texts,
+          jsonb_array_elements(parsed_content) AS s,
+          jsonb_array_elements(s->'tokens') AS t
+     WHERE texts.user_id = $1
+       AND (t->>'is_content_word')::boolean = true`,
     [user.id],
   );
+
+  const keepSeen = new Set<string>();
+  const keepForms: string[] = [];
+  const keepReadings: string[] = [];
+  for (const { dictionary_form, raw_reading } of rawContentWords.rows) {
+    const reading = toHiragana(raw_reading);
+    const key = `${dictionary_form}|${reading}`;
+    if (!keepSeen.has(key)) {
+      keepSeen.add(key);
+      keepForms.push(dictionary_form);
+      keepReadings.push(reading);
+    }
+  }
+
+  const pruneResult = keepForms.length > 0
+    ? await query<{ id: number }>(
+        `DELETE FROM words w
+         WHERE w.user_id = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM unnest($2::text[], $3::text[]) AS cw(dictionary_form, reading)
+             WHERE cw.dictionary_form = w.dictionary_form
+               AND cw.reading = w.reading
+           )
+         RETURNING id`,
+        [user.id, keepForms, keepReadings],
+      )
+    : await query<{ id: number }>(
+        `DELETE FROM words WHERE user_id = $1 RETURNING id`,
+        [user.id],
+      );
   const pruned = pruneResult.rows.length;
 
   let normalized = 0;
