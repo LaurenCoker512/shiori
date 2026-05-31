@@ -1,10 +1,11 @@
 import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
-import { buildLLMConfig } from '@/lib/llm';
+import { buildLLMConfig, tokenizeText } from '@/lib/llm';
 import { buildParsedContent } from '@/lib/processImport';
 import { kuromojiTokenize } from '@/lib/kuromoji';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { jsonResponse } from '@/lib/api';
+import type { Sentence } from '@/lib/types';
 
 export async function POST(
   _request: Request,
@@ -32,8 +33,13 @@ export async function POST(
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n');
 
-  const kuroTokens = await kuromojiTokenize(cleanedText);
-  const sentences = await buildParsedContent(kuroTokens, llmConfig);
+  let sentences: Sentence[];
+  if (user.use_llm_parsing && llmConfig !== null) {
+    sentences = await tokenizeText(llmConfig, cleanedText);
+  } else {
+    const kuroTokens = await kuromojiTokenize(cleanedText);
+    sentences = await buildParsedContent(kuroTokens, llmConfig);
+  }
   const parsedContent = parseHeadingSentinels(sentences);
 
   await query(

@@ -1,5 +1,5 @@
 import { kuromojiTokenize } from '@/lib/kuromoji';
-import { assignKanjiReadings } from '@/lib/llm';
+import { assignKanjiReadings, tokenizeText } from '@/lib/llm';
 import type { LLMConfig } from '@/lib/llm';
 import type { IpadicFeatures } from '@patdx/kuromoji';
 import { parseHeadingSentinels, toHiragana } from '@/lib/text-processing';
@@ -106,6 +106,7 @@ export async function processImport(
   userId: number,
   rawContent: string,
   config: LLMConfig | null,
+  useLlmParsing = false,
 ): Promise<void> {
   const abortController = new AbortController();
   registerImportAbort(textId, abortController);
@@ -123,8 +124,14 @@ export async function processImport(
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\n');
 
-    const kuroTokens = await kuromojiTokenize(normalizedContent);
-    const sentences = await buildParsedContent(kuroTokens, config, abortController.signal);
+    let sentences: Sentence[];
+    if (useLlmParsing && config !== null) {
+      const tokenized = await tokenizeText(config, normalizedContent, abortController.signal);
+      sentences = tokenized;
+    } else {
+      const kuroTokens = await kuromojiTokenize(normalizedContent);
+      sentences = await buildParsedContent(kuroTokens, config, abortController.signal);
+    }
     const parsedContent = parseHeadingSentinels(sentences);
 
     await query(

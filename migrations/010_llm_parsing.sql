@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN use_llm_parsing BOOLEAN NOT NULL DEFAULT false;

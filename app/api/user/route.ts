@@ -11,16 +11,17 @@ export async function PATCH(request: Request): Promise<Response> {
     name?: unknown;
     openrouter_api_key?: unknown;
     openrouter_model?: unknown;
+    use_llm_parsing?: unknown;
     google_tts_api_key?: unknown;
     tts_voice?: unknown;
     tts_speaking_rate?: unknown;
   };
 
-  const isAISettings = 'openrouter_api_key' in body || 'openrouter_model' in body;
+  const isAISettings = 'openrouter_api_key' in body || 'openrouter_model' in body || 'use_llm_parsing' in body;
   const isTTSSettings = 'google_tts_api_key' in body || 'tts_voice' in body || 'tts_speaking_rate' in body;
 
   if (isAISettings) {
-    const { openrouter_api_key, openrouter_model } = body;
+    const { openrouter_api_key, openrouter_model, use_llm_parsing } = body;
 
     if (openrouter_api_key !== undefined) {
       if (typeof openrouter_api_key !== 'string' || (openrouter_api_key !== '' && !openrouter_api_key.startsWith('sk-or-'))) {
@@ -34,14 +35,20 @@ export async function PATCH(request: Request): Promise<Response> {
       }
     }
 
+    if (use_llm_parsing !== undefined && typeof use_llm_parsing !== 'boolean') {
+      return json({ error: 'use_llm_parsing must be a boolean' }, 400);
+    }
+
     await query(
       `UPDATE users SET
         openrouter_api_key = CASE WHEN $1::text IS NOT NULL THEN NULLIF($1, '') ELSE openrouter_api_key END,
-        openrouter_model   = COALESCE($2, openrouter_model)
-       WHERE id = $3`,
+        openrouter_model   = COALESCE($2, openrouter_model),
+        use_llm_parsing    = COALESCE($3, use_llm_parsing)
+       WHERE id = $4`,
       [
         openrouter_api_key !== undefined ? String(openrouter_api_key) : null,
         openrouter_model !== undefined ? String(openrouter_model).trim() : null,
+        use_llm_parsing !== undefined ? use_llm_parsing : null,
         user.id,
       ],
     );

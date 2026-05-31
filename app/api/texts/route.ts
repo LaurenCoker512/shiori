@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
   const textId = textResult.rows[0].id;
 
   // waitUntil keeps the serverless function alive after the response is sent
-  waitUntil(processImport(textId, user.id, content, llmConfig));
+  waitUntil(processImport(textId, user.id, content, llmConfig, user.use_llm_parsing));
 
   return jsonResponse({ id: textId }, 202);
 }

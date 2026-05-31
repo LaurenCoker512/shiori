@@ -41,6 +41,7 @@ export default async function SettingsPage() {
         <ApiKeyForm
           hasOpenRouterKey={user.openrouter_api_key !== null}
           openrouterModel={user.openrouter_model}
+          useLlmParsing={user.use_llm_parsing}
         />
       </div>
 

@@ -10,15 +10,18 @@ const SUPPORTED_MODELS: { id: string; label: string }[] = [
 interface ApiKeyFormProps {
   hasOpenRouterKey: boolean;
   openrouterModel: string;
+  useLlmParsing: boolean;
 }
 
 export function ApiKeyForm({
   hasOpenRouterKey,
   openrouterModel,
+  useLlmParsing,
 }: ApiKeyFormProps) {
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openrouterKeyRevealed, setOpenrouterKeyRevealed] = useState(false);
   const [selectedModel, setSelectedModel] = useState(openrouterModel);
+  const [llmParsing, setLlmParsing] = useState(useLlmParsing);
   const [openrouterKeySaved, setOpenrouterKeySaved] =
     useState(hasOpenRouterKey);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
@@ -31,8 +34,9 @@ export function ApiKeyForm({
     setStatus("saving");
     setErrorMessage("");
 
-    const body: Record<string, string> = {
+    const body: Record<string, string | boolean> = {
       openrouter_model: selectedModel.trim(),
+      use_llm_parsing: llmParsing,
     };
     if (openrouterKey.trim() !== "")
       body.openrouter_api_key = openrouterKey.trim();
@@ -189,6 +193,50 @@ export function ApiKeyForm({
               );
             })}
           </div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span
+            className="font-en text-[12px] font-medium"
+            style={{ color: "var(--yg-ink-soft)" }}
+          >
+            Parsing
+          </span>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className="relative">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={llmParsing}
+                disabled={!openrouterKeySaved}
+                onChange={e => { setLlmParsing(e.target.checked); setStatus("idle"); }}
+                aria-label="Use LLM for word boundary parsing"
+              />
+              <div
+                className="w-10 h-6 rounded-full transition-colors"
+                style={{
+                  background: llmParsing && openrouterKeySaved ? "var(--yg-ink)" : "var(--yg-rule)",
+                  opacity: openrouterKeySaved ? 1 : 0.4,
+                }}
+              />
+              <div
+                className="absolute top-1 left-1 w-4 h-4 rounded-full transition-transform"
+                style={{
+                  background: "var(--yg-paper-hi)",
+                  transform: llmParsing && openrouterKeySaved ? "translateX(16px)" : "translateX(0)",
+                }}
+              />
+            </div>
+            <div>
+              <div className="font-en text-[13px]" style={{ color: openrouterKeySaved ? "var(--yg-ink)" : "var(--yg-ink-soft)" }}>
+                Use LLM for word boundary parsing
+              </div>
+              <div className="font-en text-[11px]" style={{ color: "var(--yg-ink-soft)" }}>
+                {openrouterKeySaved
+                  ? "Slower but more accurate segmentation. Re-parse texts after changing."
+                  : "Requires an OpenRouter API key."}
+              </div>
+            </div>
+          </label>
         </div>
       </div>
 
