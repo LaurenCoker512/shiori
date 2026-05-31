@@ -82,11 +82,11 @@ export async function POST(request: Request): Promise<Response> {
       merged++;
     } else {
       // No collision — straightforward update; skip if already canonical (idempotent)
-      const result = await query(
-        `UPDATE words SET dictionary_form = $1 WHERE id = $2 AND user_id = $3 AND dictionary_form != $1`,
+      const result = await query<{ id: number }>(
+        `UPDATE words SET dictionary_form = $1 WHERE id = $2 AND user_id = $3 AND dictionary_form != $1 RETURNING id`,
         [canonical_dictionary_form, id, user.id],
       );
-      normalized += result.rowCount ?? 0;
+      normalized += result.rows.length;
     }
   }
 
@@ -137,11 +137,11 @@ export async function POST(request: Request): Promise<Response> {
     for (const word of wordsResult.rows) {
       const tier = await lookupFrequencyTier(word.dictionary_form, word.reading);
       if (tier !== null) {
-        const result = await query(
-          `UPDATE words SET frequency_tier = $1 WHERE id = $2 AND user_id = $3 AND frequency_tier IS NULL`,
+        const result = await query<{ id: number }>(
+          `UPDATE words SET frequency_tier = $1 WHERE id = $2 AND user_id = $3 AND frequency_tier IS NULL RETURNING id`,
           [tier, word.id, user.id],
         );
-        frequencyBackfilled += result.rowCount ?? 0;
+        frequencyBackfilled += result.rows.length;
       }
     }
   }
