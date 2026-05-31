@@ -14,6 +14,7 @@ const FAKE_USER: SessionUser = {
   name: 'Test',
   email: 'test@example.com',
   openrouter_api_key: null,
+  use_llm_parsing: false,
   openrouter_model: 'anthropic/claude-sonnet-4-6',
   google_tts_api_key: 'AIza-test-key',
   tts_voice: 'ja-JP-Neural2-B',

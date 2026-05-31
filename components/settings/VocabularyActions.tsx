@@ -14,6 +14,8 @@ interface CleanupSummary {
 export function VocabularyActions() {
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [summary, setSummary] = useState<CleanupSummary | null>(null);
+  const [clearStatus, setClearStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [clearCount, setClearCount] = useState<number | null>(null);
 
   const { reparsePhase, startReparse } = useReparse();
 
@@ -56,6 +58,19 @@ export function VocabularyActions() {
     }
     setSummary(await cleanupRes.json() as CleanupSummary);
     setCleanupStatus('done');
+  }
+
+  async function handleClearTranslations() {
+    setClearStatus('running');
+    setClearCount(null);
+    const res = await fetch('/api/words/clear-translations', { method: 'POST' });
+    if (!res.ok) {
+      setClearStatus('error');
+      return;
+    }
+    const data = await res.json() as { cleared: number };
+    setClearCount(data.cleared);
+    setClearStatus('done');
   }
 
   return (
@@ -124,6 +139,47 @@ export function VocabularyActions() {
             {reparsePhase === 'running' ? 'Re-parsing…' : 'Re-parse texts'}
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span className="font-en text-[14px] font-semibold" style={{ color: 'var(--yg-ink)' }}>
+            Cached translations
+          </span>
+        </div>
+
+        <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
+          Clear auto-generated translations so they are re-fetched on next open. Custom translations you have entered are not affected.
+        </p>
+
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => { void handleClearTranslations(); }}
+            disabled={clearStatus === 'running'}
+            className="font-en text-[13px] font-semibold px-5 py-2.5 rounded-full disabled:opacity-40 transition-opacity"
+            style={{ background: 'var(--yg-ink)', color: 'var(--yg-paper-hi)', border: 'none', cursor: 'pointer' }}
+          >
+            {clearStatus === 'running' ? 'Clearing…' : 'Clear cached translations'}
+          </button>
+
+          {clearStatus === 'done' && clearCount !== null && (
+            <span className="font-en text-[13px]" style={{ color: 'var(--yg-bamboo-dark)' }}>
+              Done.
+            </span>
+          )}
+          {clearStatus === 'error' && (
+            <span role="alert" className="font-en text-[13px]" style={{ color: 'var(--yg-coral-dark)' }}>
+              Failed. Please try again.
+            </span>
+          )}
+        </div>
+
+        {clearStatus === 'done' && clearCount !== null && (
+          <p className="font-en text-[13px]" style={{ color: 'var(--yg-ink-soft)' }}>
+            {clearCount} cached {clearCount === 1 ? 'translation' : 'translations'} cleared
+          </p>
+        )}
       </div>
     </div>
   );

@@ -19,9 +19,10 @@ interface ReaderContentProps {
   textTitle: string;
   ttsVoice: string;
   ttsSpeakingRate: number;
+  useLlmLookup?: boolean;
 }
 
-export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId, ttsEnabled, textTitle, ttsVoice, ttsSpeakingRate }: ReaderContentProps) {
+export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textId, ttsEnabled, textTitle, ttsVoice, ttsSpeakingRate, useLlmLookup = false }: ReaderContentProps) {
   const [showFurigana, setShowFurigana] = useState(true);
   const [fontFamily, setFontFamily] = useState<'serif' | 'sans'>('serif');
   const [fontSize, setFontSize] = useState(18);
@@ -257,6 +258,7 @@ export function ReaderContent({ content, wordStatusMap, furiganaOverrides, textI
           anchorRect={popoverAnchor}
           surface={popoverSurface ?? undefined}
           currentFurigana={popoverFurigana ?? undefined}
+          useLlmLookup={useLlmLookup}
           onClose={() => setPopoverWord(null)}
           onStatusUpdate={handleStatusUpdate}
           onFuriganaEdit={handleFuriganaEdit}

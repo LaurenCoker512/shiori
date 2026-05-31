@@ -63,6 +63,7 @@ export default async function ReaderPage({ params }: { params: { id: string } })
         textTitle={text.title}
         ttsVoice={user.tts_voice}
         ttsSpeakingRate={user.tts_speaking_rate}
+        useLlmLookup={user.use_llm_parsing && user.openrouter_api_key !== null}
       />
     </main>
   );

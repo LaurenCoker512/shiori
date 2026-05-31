@@ -20,7 +20,7 @@ const USER_1: SessionUser = {
   name: 'User One',
   email: 'user1@example.com',
   openrouter_api_key: null,
-  openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
+  use_llm_parsing: false, openrouter_model: 'anthropic/claude-sonnet-4-6', google_tts_api_key: null, tts_voice: 'ja-JP-Neural2-B', tts_speaking_rate: 1.0,
 };
 
 const USER_2: SessionUser = { ...USER_1, id: 2, name: 'User Two', email: 'user2@example.com' };

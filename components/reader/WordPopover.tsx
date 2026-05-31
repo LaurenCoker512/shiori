@@ -12,6 +12,7 @@ interface WordPopoverProps {
   anchorRect: DOMRect;
   surface?: string;
   currentFurigana?: string;
+  useLlmLookup?: boolean;
   onClose: () => void;
   onStatusUpdate: (word: Word) => void;
   onFuriganaEdit?: (surface: string, newReading: string) => void;
@@ -55,7 +56,7 @@ function JMdictDisplay({ entry }: { entry: JMdictEntry }) {
   );
 }
 
-export function WordPopover({ word, surface, currentFurigana, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
+export function WordPopover({ word, surface, currentFurigana, useLlmLookup = false, onClose, onStatusUpdate, onFuriganaEdit }: WordPopoverProps) {
   const { adjustKnownWordCount } = useKnownWordCount();
   const [translationState, setTranslationState] = useState<TranslationState | null>(null);
   const [markingStatus, setMarkingStatus] = useState(false);
@@ -71,12 +72,14 @@ export function WordPopover({ word, surface, currentFurigana, onClose, onStatusU
     let cancelled = false;
     (async () => {
       try {
-        const entry = await lookupWord(word.dictionary_form, word.reading);
-        if (cancelled) return;
+        if (!useLlmLookup) {
+          const entry = await lookupWord(word.dictionary_form, word.reading);
+          if (cancelled) return;
 
-        if (entry) {
-          setTranslationState({ kind: 'jmdict', entry });
-          return;
+          if (entry) {
+            setTranslationState({ kind: 'jmdict', entry });
+            return;
+          }
         }
 
         const res = await fetch(`/api/words/${word.id}/translation`);
