@@ -10,8 +10,10 @@ interface WordTokenProps {
   onWordClick?: (word: Word, surface: string, furigana: string, anchor: DOMRect) => void;
 }
 
+const HAS_JAPANESE = /[ぁ-んァ-ン一-鿿㐀-䶿]/;
+
 export function WordToken({ token, word, furiganaOverride, showFurigana, onWordClick }: WordTokenProps) {
-  if (!token.is_content_word) {
+  if (!token.is_content_word || !HAS_JAPANESE.test(token.dictionary_form)) {
     return <span>{token.surface}</span>;
   }
 
