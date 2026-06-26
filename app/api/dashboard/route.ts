@@ -43,6 +43,7 @@ export async function GET(): Promise<Response> {
           AND w.user_id = $1
         WHERE t.user_id = $1
           AND (token->>'is_content_word')::boolean = true
+          AND token->>'dictionary_form' ~ '[ぁ-んァ-ン一-鿿㐀-䶿]'
         GROUP BY t.id, t.title, t.last_read_at
       )
       SELECT *, ROUND(known_count::numeric / NULLIF(total_count, 0) * 100, 1) AS pct_known
